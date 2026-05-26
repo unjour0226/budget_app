@@ -1866,24 +1866,128 @@ let ui = {
   reportYear: new Date().getFullYear(),
 };
 
-function load() {
-  const saved = localStorage.getItem('pp_budget_v2');
-  if (saved) {
-    data = JSON.parse(saved);
-  } else {
-    data.accounts = DEFAULT_ACCOUNTS.map(a => ({...a}));
-    data.transactions = [];
-    data.budgets = DEFAULT_BUDGETS.map(b => ({...b}));
-    data.incCategories = [...DEFAULT_INC_CATS];
-    save();
+// ============================================================
+// SUPABASE
+// ============================================================
+const SUPA_URL = 'https://mjqjyztalpbgaiuorplg.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcWp5enRhbHBiZ2FpdW9ycGxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3NTgxMzMsImV4cCI6MjA5NTMzNDEzM30.WxADDzcxxbGyojJ0vUThcsQdoGDVYyEzyjYyj8NnNpk';
+
+const supa = {
+  async get(table) {
+    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?select=*`, {
+      headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
+    });
+    return r.ok ? r.json() : [];
+  },
+  async upsert(table, rows) {
+    await fetch(`${SUPA_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify(rows)
+    });
+  },
+  async delete(table, id) {
+    await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
+    });
+  },
+  async deleteAll(table) {
+    await fetch(`${SUPA_URL}/rest/v1/${table}?id=neq.___none___`, {
+      method: 'DELETE',
+      headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
+    });
   }
-  if (!data.incCategories) data.incCategories = [...DEFAULT_INC_CATS];
-  if (!data.budgets) data.budgets = DEFAULT_BUDGETS.map(b => ({...b}));
-  ui.currentIncCat = data.incCategories[0] || '工资';
+};
+
+function showLoading(msg) {
+  let el = document.getElementById('loadingOverlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'loadingOverlay';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(40,80,160,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:EB Garamond,serif;font-size:18px;font-style:italic;gap:16px;backdrop-filter:blur(4px)';
+    el.innerHTML = '<div style="font-size:36px">✦</div><div id="loadingMsg">Loading...</div>';
+    document.body.appendChild(el);
+  }
+  document.getElementById('loadingMsg').textContent = msg || '正在连接星球…';
+  el.style.display = 'flex';
 }
 
-function save() {
+function hideLoading() {
+  const el = document.getElementById('loadingOverlay');
+  if (el) el.style.display = 'none';
+}
+
+async function load() {
+  showLoading('正在连接星球…');
+  try {
+    // Try loading from Supabase
+    const [txs, accs, budgets, settings] = await Promise.all([
+      supa.get('pp_transactions'),
+      supa.get('pp_accounts'),
+      supa.get('pp_budgets'),
+      supa.get('pp_settings'),
+    ]);
+
+    // Accounts: use defaults if empty
+    data.accounts = accs.length > 0 ? accs : DEFAULT_ACCOUNTS.map(a => ({...a}));
+    data.transactions = txs || [];
+    data.budgets = budgets.length > 0 ? budgets : DEFAULT_BUDGETS.map(b => ({...b}));
+
+    // Income categories from settings
+    const incCatSetting = settings.find(s => s.key === 'inc_categories');
+    data.incCategories = incCatSetting ? JSON.parse(incCatSetting.value) : [...DEFAULT_INC_CATS];
+
+    // If first time, push defaults to Supabase
+    if (accs.length === 0) await supa.upsert('pp_accounts', data.accounts);
+    if (budgets.length === 0) await supa.upsert('pp_budgets', data.budgets);
+    if (!incCatSetting) await supa.upsert('pp_settings', [{key:'inc_categories', value: JSON.stringify(data.incCategories)}]);
+
+  } catch(e) {
+    // Fallback to localStorage
+    const saved = localStorage.getItem('pp_budget_v2');
+    if (saved) { const d = JSON.parse(saved); Object.assign(data, d); }
+    else {
+      data.accounts = DEFAULT_ACCOUNTS.map(a => ({...a}));
+      data.transactions = [];
+      data.budgets = DEFAULT_BUDGETS.map(b => ({...b}));
+      data.incCategories = [...DEFAULT_INC_CATS];
+    }
+  }
+
+  if (!data.incCategories || !data.incCategories.length) data.incCategories = [...DEFAULT_INC_CATS];
+  if (!data.budgets || !data.budgets.length) data.budgets = DEFAULT_BUDGETS.map(b => ({...b}));
+  ui.currentIncCat = data.incCategories[0] || '工资';
+  hideLoading();
+}
+
+async function save() {
+  // Always save to localStorage as backup
   localStorage.setItem('pp_budget_v2', JSON.stringify(data));
+  // Save to Supabase in background (don't await)
+  try {
+    await Promise.all([
+      supa.upsert('pp_accounts', data.accounts),
+      supa.upsert('pp_budgets', data.budgets),
+      supa.upsert('pp_settings', [{key:'inc_categories', value: JSON.stringify(data.incCategories)}]),
+    ]);
+  } catch(e) { console.warn('Supabase save failed, localStorage backup used'); }
+}
+
+async function saveTx(tx) {
+  localStorage.setItem('pp_budget_v2', JSON.stringify(data));
+  try { await supa.upsert('pp_transactions', [tx]); }
+  catch(e) { console.warn('Supabase tx save failed'); }
+}
+
+async function deleteTxRemote(id) {
+  localStorage.setItem('pp_budget_v2', JSON.stringify(data));
+  try { await supa.delete('pp_transactions', id); }
+  catch(e) { console.warn('Supabase delete failed'); }
 }
 
 function uid() {
@@ -2214,6 +2318,7 @@ function submitExpense() {
       budget_id: getBudgetIdForCat(ui.currentExpCat),
     };
     data.transactions.push(tx);
+    saveTx(tx);
     if (acc) {
       // For credit cards, spending increases the balance owed (shown as negative)
       if (acc.type === 'credit') acc.balance = (parseFloat(acc.balance) - amount).toFixed(2);
@@ -2232,12 +2337,14 @@ function submitExpense() {
     const fromAcc = data.accounts.find(a=>a.id===fromId);
     const toAcc = data.accounts.find(a=>a.id===toId);
 
-    data.transactions.push({
+    const trfTx = {
       id: uid(), type: 'transfer', amount,
       from_account: fromId, to_account: toId,
       note: document.getElementById('trfNote').value.trim() || '转账',
       date: document.getElementById('trfDate').value || today(),
-    });
+    };
+    data.transactions.push(trfTx);
+    saveTx(trfTx);
     if (fromAcc) fromAcc.balance = (parseFloat(fromAcc.balance) - amount).toFixed(2);
     if (toAcc) toAcc.balance = (parseFloat(toAcc.balance) + amount).toFixed(2);
     document.getElementById('trfAmount').value = '';
@@ -2252,12 +2359,14 @@ function submitExpense() {
     const fromAcc = data.accounts.find(a=>a.id===fromId);
     const toAcc = data.accounts.find(a=>a.id===toId);
 
-    data.transactions.push({
+    const payTx = {
       id: uid(), type: 'payment', amount,
       from_account: fromId, to_account: toId,
       note: document.getElementById('payNote').value.trim() || `还款 · ${toAcc?.name || ''}`,
       date: document.getElementById('payDate').value || today(),
-    });
+    };
+    data.transactions.push(payTx);
+    saveTx(payTx);
     if (fromAcc) fromAcc.balance = (parseFloat(fromAcc.balance) - amount).toFixed(2);
     if (toAcc) toAcc.balance = (parseFloat(toAcc.balance) + amount).toFixed(2); // credit balance improves
     document.getElementById('payAmount').value = '';
@@ -2277,13 +2386,15 @@ function submitIncome() {
   const accId = document.getElementById('incAccount').value;
   const acc = data.accounts.find(a=>a.id===accId);
 
-  data.transactions.push({
+  const incTx = {
     id: uid(), type: 'income', amount,
     category: ui.currentIncCat,
     account_id: accId,
     note: document.getElementById('incNote').value.trim(),
     date: document.getElementById('incDate').value || today(),
-  });
+  };
+  data.transactions.push(incTx);
+  saveTx(incTx);
   if (acc) acc.balance = (parseFloat(acc.balance) + amount).toFixed(2);
 
   document.getElementById('incAmount').value = '';
@@ -2312,6 +2423,7 @@ function deleteTx(id) {
   }
 
   data.transactions = data.transactions.filter(t=>t.id!==id);
+  deleteTxRemote(id);
   save();
   render();
   showToast('已删除');
@@ -2777,13 +2889,12 @@ function changeCalMonth(delta) {
 // ============================================================
 // INIT
 // ============================================================
-load();
 initStars();
-render();
 document.getElementById('expDate').value = today();
 document.getElementById('incDate').value = today();
 document.getElementById('trfDate').value = today();
 document.getElementById('payDate').value = today();
+load().then(() => render());
 </script>
 </body>
 </html>
