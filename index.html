@@ -1568,6 +1568,8 @@ body[data-page="report"] .stats-summary-value.exp { color: #f0a0b0; }
   border-radius: var(--radius) var(--radius) 0 0;
   padding: 20px 16px 40px;
   width: 100%;
+  max-height: 75vh;
+  overflow-y: auto;
 }
 
 .sticker-picker-title {
@@ -1581,7 +1583,17 @@ body[data-page="report"] .stats-summary-value.exp { color: #f0a0b0; }
 .sticker-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
+  gap: 8px;
+}
+.sticker-group-label {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: var(--text3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 10px 2px 4px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
 }
 
 .sticker-option {
@@ -2813,7 +2825,7 @@ function openStickerPicker(catId, callback) {
   const currentSticker = (data.catStickers||{})[catId] || null;
 
   // Group label style
-  const groupLabel = (text) => `<div style="grid-column:1/-1;font-size:10px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;padding:8px 2px 4px">${text}</div>`;
+  const groupLabel = (text) => `<div class="sticker-group-label">${text}</div>`;
 
   let html = `<div class="sticker-none" onclick="selectSticker(null)" title="清除">✕</div>`;
 
@@ -4863,7 +4875,7 @@ function openStickerPicker(catId, callback) {
   const currentSticker = (data.catStickers||{})[catId] || null;
 
   // Group label style
-  const groupLabel = (text) => `<div style="grid-column:1/-1;font-size:10px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;padding:8px 2px 4px">${text}</div>`;
+  const groupLabel = (text) => `<div class="sticker-group-label">${text}</div>`;
 
   let html = `<div class="sticker-none" onclick="selectSticker(null)" title="清除">✕</div>`;
 
