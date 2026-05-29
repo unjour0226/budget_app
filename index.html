@@ -1943,9 +1943,9 @@ body[data-page="report"] .stats-summary-value.exp { color: #f0a0b0; }
 
   <!-- Period Nav -->
   <div class="stats-nav-row">
-    <button class="stats-nav-btn" onclick="changeStatsPeriod(-1)">◀</button>
+    <button class="stats-nav-btn" onclick="changeReportPeriod(-1)">◀</button>
     <div class="stats-nav-label" id="statsNavLabel">2026年5月</div>
-    <button class="stats-nav-btn" onclick="changeStatsPeriod(1)">▶</button>
+    <button class="stats-nav-btn" onclick="changeReportPeriod(1)">▶</button>
   </div>
 
   <!-- Donut Chart -->
@@ -2029,7 +2029,7 @@ function changeReportMonth(delta) { changeReportPeriod(delta); }
 // ============================================================
 function openModal(id) {
   if (id === 'editBudgetModal') { openBudgetModal(); return; }
-  if (id === 'incCatModal') { openIncCatModal(); return; }
+  if (id === 'incCatModal') { renderIncCatList(); document.getElementById('incCatModal').classList.add('open'); return; }
   if (id === 'expCatModal') { renderExpCatModalList(); document.getElementById(id).classList.add('open'); return; }
   document.getElementById(id).classList.add('open');
 }
@@ -2289,7 +2289,18 @@ function deleteExpCat(id) {
 function renderExpCatModalList() {
   const el = document.getElementById('expCatModalList');
   if (!el) return;
-  el.innerHTML = (data.expCategories||[]).map(c => `
+  // Built-in (non-deletable)
+  const builtInHtml = EXP_CATEGORIES.map(c => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:14px;color:var(--text)">${c.emoji||''} ${c.label}</div>
+        ${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}
+      </div>
+      <span style="font-size:10px;color:var(--text3);letter-spacing:0.05em">内置</span>
+    </div>
+  `).join('');
+  // Custom (deletable)
+  const customHtml = (data.expCategories||[]).map(c => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
       <div>
         <div style="font-size:14px;color:var(--text)">${c.label}</div>
@@ -2297,7 +2308,8 @@ function renderExpCatModalList() {
       </div>
       <button onclick="deleteExpCat('${c.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
     </div>
-  `).join('') || '<div style="color:var(--text3);font-size:13px;padding:8px">还没有自定义分类</div>';
+  `).join('') || '<div style="color:var(--text3);font-size:13px;padding:8px 0">还没有自定义分类</div>';
+  el.innerHTML = builtInHtml + customHtml;
 }
 
 // ============================================================
@@ -2580,9 +2592,9 @@ load().then(() => render());
 
   <!-- Period Nav -->
   <div class="stats-nav-row">
-    <button class="stats-nav-btn" onclick="changeStatsPeriod(-1)">◀</button>
+    <button class="stats-nav-btn" onclick="changeReportPeriod(-1)">◀</button>
     <div class="stats-nav-label" id="statsNavLabel">2026年5月</div>
-    <button class="stats-nav-btn" onclick="changeStatsPeriod(1)">▶</button>
+    <button class="stats-nav-btn" onclick="changeReportPeriod(1)">▶</button>
   </div>
 
   <!-- Donut Chart -->
@@ -2904,7 +2916,7 @@ async function load() {
     data.incCategories = incCatSetting ? JSON.parse(incCatSetting.value) : [...DEFAULT_INC_CATS];
 
     const expCatSetting = settings.find(s => s.key === 'exp_categories');
-    data.expCategories = expCatSetting ? JSON.parse(expCatSetting.value) : DEFAULT_EXP_CATS.map(c=>({...c,sub:[...c.sub]}));
+    data.expCategories = expCatSetting ? JSON.parse(expCatSetting.value) : [];
 
     const balHistSetting = settings.find(s => s.key === 'balance_history');
     data.balanceHistory = balHistSetting ? JSON.parse(balHistSetting.value) : [];
@@ -2928,7 +2940,7 @@ async function load() {
   }
 
   if (!data.incCategories || !data.incCategories.length) data.incCategories = [...DEFAULT_INC_CATS];
-  if (!data.expCategories || !data.expCategories.length) data.expCategories = DEFAULT_EXP_CATS.map(c=>({...c,sub:[...c.sub]}));
+  if (!data.expCategories) data.expCategories = [];
   if (!data.balanceHistory) data.balanceHistory = [];
   if (!data.budgets || !data.budgets.length) data.budgets = DEFAULT_BUDGETS.map(b => ({...b}));
   ui.currentIncCat = data.incCategories[0] || '工资';
@@ -2974,7 +2986,6 @@ function render() {
   renderOverview();
   renderExpensePage();
   renderIncomePage();
-  renderAccountsPage();
   renderReport();
 }
 
@@ -3060,7 +3071,10 @@ function renderOverview() {
 function renderExpensePage() {
   // Categories
   const expWrap = document.getElementById('expCatWrap');
-  const allExpCats = [...EXP_CATEGORIES, ...(data.expCategories||[])];
+  // Built-in cats + only custom cats not already in built-ins
+  const builtInIds = EXP_CATEGORIES.map(c=>c.id);
+  const extraCats = (data.expCategories||[]).filter(c => !builtInIds.includes(c.id));
+  const allExpCats = EXP_CATEGORIES.concat(extraCats);
   expWrap.innerHTML = allExpCats.map(c =>
     `<div class="cat-pill ${ui.currentExpCat === c.id ? 'active' : ''}" onclick="setExpCat('${c.id}')">${c.emoji ? c.emoji+' ' : ''}${c.label}</div>`
   ).join('');
@@ -3160,7 +3174,9 @@ function renderReport() {
   if (expEl) expEl.textContent = '-$' + totalExp.toFixed(2);
   if (netEl) { netEl.textContent = (net>=0?'+':'-') + '$' + Math.abs(net).toFixed(2); netEl.className = 'stats-summary-value ' + (net>=0?'inc':'exp'); }
 
-  const allCats = EXP_CATEGORIES.concat(data.expCategories||[]);
+  const _builtInIds = EXP_CATEGORIES.map(c=>c.id);
+  const _extraCats = (data.expCategories||[]).filter(c => !_builtInIds.includes(c.id));
+  const allCats = EXP_CATEGORIES.concat(_extraCats);
   const catMap = {};
   filteredTxs.forEach(function(t) {
     const catId = t.category || 'other';
@@ -3590,7 +3606,7 @@ function saveBudgets() {
 // INCOME CATEGORIES
 function openIncCatModal() {
   renderIncCatList();
-  openModal('incCatModal');
+  document.getElementById('incCatModal').classList.add('open');
 }
 
 function renderIncCatList() {
@@ -3637,7 +3653,7 @@ function changeReportMonth(delta) { changeReportPeriod(delta); }
 // ============================================================
 function openModal(id) {
   if (id === 'editBudgetModal') { openBudgetModal(); return; }
-  if (id === 'incCatModal') { openIncCatModal(); return; }
+  if (id === 'incCatModal') { renderIncCatList(); document.getElementById('incCatModal').classList.add('open'); return; }
   if (id === 'expCatModal') { renderExpCatModalList(); document.getElementById(id).classList.add('open'); return; }
   document.getElementById(id).classList.add('open');
 }
@@ -3897,7 +3913,18 @@ function deleteExpCat(id) {
 function renderExpCatModalList() {
   const el = document.getElementById('expCatModalList');
   if (!el) return;
-  el.innerHTML = (data.expCategories||[]).map(c => `
+  // Built-in (non-deletable)
+  const builtInHtml = EXP_CATEGORIES.map(c => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:14px;color:var(--text)">${c.emoji||''} ${c.label}</div>
+        ${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}
+      </div>
+      <span style="font-size:10px;color:var(--text3);letter-spacing:0.05em">内置</span>
+    </div>
+  `).join('');
+  // Custom (deletable)
+  const customHtml = (data.expCategories||[]).map(c => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
       <div>
         <div style="font-size:14px;color:var(--text)">${c.label}</div>
@@ -3905,7 +3932,8 @@ function renderExpCatModalList() {
       </div>
       <button onclick="deleteExpCat('${c.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
     </div>
-  `).join('') || '<div style="color:var(--text3);font-size:13px;padding:8px">还没有自定义分类</div>';
+  `).join('') || '<div style="color:var(--text3);font-size:13px;padding:8px 0">还没有自定义分类</div>';
+  el.innerHTML = builtInHtml + customHtml;
 }
 
 // ============================================================
