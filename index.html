@@ -1339,12 +1339,12 @@ body[data-page="assets"] .nav-btn.active {
     <div class="header-date" id="headerDate"></div>
   </div>
   <div class="nav">
-    <button class="nav-btn active" onclick="goTo('overview')">总览</button>
-    <button class="nav-btn" onclick="goTo('expense')">支出</button>
-    <button class="nav-btn" onclick="goTo('income')">收入</button>
-    <button class="nav-btn" onclick="goTo('assets')">资产</button>
-    <button class="nav-btn" onclick="goTo('calendar')">日历</button>
-    <button class="nav-btn" onclick="goTo('report')">月报</button>
+    <button class="nav-btn main-nav active" onclick="goTo('overview')">总览</button>
+    <button class="nav-btn main-nav" onclick="goTo('expense')">支出</button>
+    <button class="nav-btn main-nav" onclick="goTo('income')">收入</button>
+    <button class="nav-btn main-nav" onclick="goTo('assets')">资产</button>
+    <button class="nav-btn main-nav" onclick="goTo('calendar')">日历</button>
+    <button class="nav-btn main-nav" onclick="goTo('report')">月报</button>
   </div>
 </div>
 
@@ -2098,7 +2098,7 @@ function renderOverview() {
     const b = parseFloat(a.balance);
     const cls = b > 0 ? 'pos' : (b < 0 ? 'neg' : 'zero');
     const typeLabel = {cash:'现金',debit:'储蓄卡',credit:'信用卡'}[a.type] || a.type;
-    return `<div class="account-chip" onclick="goTo('accounts')">
+    return `<div class="account-chip" onclick="goTo('assets')">
       <div class="account-chip-type">${typeLabel}</div>
       <div class="account-chip-name">${a.name}</div>
       <div class="account-chip-balance ${cls}">$${Math.abs(b).toFixed(2)}</div>
@@ -2330,11 +2330,11 @@ function renderTxItem(t) {
 // ============================================================
 function goTo(page) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.main-nav').forEach(b => b.classList.remove('active'));
   document.getElementById('section-'+page).classList.add('active');
   document.body.setAttribute('data-page', page);
   const pages = ['overview','expense','income','assets','calendar','report'];
-  document.querySelectorAll('.nav-btn')[pages.indexOf(page)]?.classList.add('active');
+  document.querySelectorAll('.main-nav')[pages.indexOf(page)]?.classList.add('active');
 
   if (page === 'expense') {
     document.getElementById('expDate').value = today();
