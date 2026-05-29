@@ -1931,6 +1931,84 @@ body[data-page="report"] .stats-summary-value.exp { color: #f0a0b0; }
   <div id="balanceHistoryList"></div>
 
 </div>
+
+<!-- ===== CALENDAR ===== -->
+<div class="section" id="section-calendar">
+
+  <!-- Fox + Prince illustration -->
+  <div class="section-illustration" style="display:flex">
+    <svg width="200" height="90" viewBox="0 0 200 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0 78 Q50 72 100 76 Q150 72 200 78 L200 90 L0 90 Z" fill="#e8c840" opacity="0.2"/>
+      <path d="M0 80 Q50 75 100 78 Q150 75 200 80 L200 90 L0 90 Z" fill="#c8a030" opacity="0.25"/>
+      <ellipse cx="148" cy="68" rx="18" ry="10" fill="#d86820"/>
+      <circle cx="164" cy="60" r="10" fill="#d86820"/>
+      <polygon points="158,52 154,42 162,50" fill="#d86820"/>
+      <polygon points="168,52 172,42 164,50" fill="#d86820"/>
+      <ellipse cx="166" cy="63" rx="5" ry="4" fill="#f0c080" opacity="0.8"/>
+      <circle cx="161" cy="59" r="1.5" fill="#2c1a08"/>
+      <circle cx="169" cy="59" r="1.5" fill="#2c1a08"/>
+      <path d="M163 63 Q166 65 169 63" stroke="#2c1a08" stroke-width="1" fill="none" stroke-linecap="round"/>
+      <path d="M130 68 Q118 60 115 70 Q118 80 132 75" fill="#d86820"/>
+      <ellipse cx="116" cy="70" rx="6" ry="5" fill="#f0ece0"/>
+      <rect x="138" y="76" width="5" height="10" rx="2" fill="#c05818"/>
+      <rect x="145" y="76" width="5" height="10" rx="2" fill="#c05818"/>
+      <rect x="153" y="76" width="5" height="10" rx="2" fill="#c05818"/>
+      <rect x="54" y="52" width="10" height="16" rx="2" fill="#f5e0a0"/>
+      <path d="M52 58 Q59 55 66 58" stroke="#b82030" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <rect x="52" y="59" width="14" height="11" rx="2" fill="#f5e040"/>
+      <rect x="53" y="69" width="5" height="11" rx="2" fill="#f5e040" transform="rotate(8 53 69)"/>
+      <rect x="59" y="69" width="5" height="11" rx="2" fill="#f5e040" transform="rotate(-5 59 69)"/>
+      <circle cx="59" cy="46" r="8" fill="#f5e0a0"/>
+      <path d="M52 44 Q54 36 59 38 Q64 36 66 44" fill="#f5d060"/>
+      <circle cx="61" cy="46" r="1.2" fill="#2c1a08"/>
+      <circle cx="56" cy="46" r="1.2" fill="#2c1a08"/>
+      <text x="10" y="20" font-size="9" fill="#c8a030" opacity="0.6">✦</text>
+      <text x="100" y="15" font-size="7" fill="#c8a030" opacity="0.5">✦</text>
+      <text x="185" y="25" font-size="6" fill="#c8a030" opacity="0.4">✦</text>
+    </svg>
+  </div>
+
+  <div class="daily-budget-card">
+    <div class="daily-budget-title">今日预算剩余</div>
+    <div class="daily-budget-row" id="dailyBudgetRow"></div>
+  </div>
+
+  <div class="piggy-card" id="savingsCard">
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <div style="flex:1;text-align:center">
+        <div id="groceryStars" style="font-size:20px;letter-spacing:2px;min-height:28px;margin-bottom:6px"></div>
+        <div class="piggy-title" style="font-size:11px">家庭买菜节省</div>
+        <div class="piggy-amount" id="grocerySaved" style="font-size:28px"><span style="font-size:14px">$ </span>0.00</div>
+      </div>
+      <div style="width:1px;background:rgba(197,163,132,0.2);margin:4px 0"></div>
+      <div style="flex:1;text-align:center">
+        <div id="personalRoses" style="font-size:20px;letter-spacing:2px;min-height:28px;margin-bottom:6px"></div>
+        <div class="piggy-title" style="font-size:11px">个人预算节省</div>
+        <div class="piggy-amount" id="personalSaved" style="font-size:28px"><span style="font-size:14px">$ </span>0.00</div>
+      </div>
+    </div>
+    <div class="piggy-history">
+      <div class="piggy-history-title">每周明细</div>
+      <div id="piggyHistory"></div>
+    </div>
+  </div>
+
+  <div class="cal-nav">
+    <button class="cal-nav-btn" onclick="changeCalMonth(-1)">‹</button>
+    <div class="cal-month-label" id="calMonthLabel"></div>
+    <button class="cal-nav-btn" onclick="changeCalMonth(1)">›</button>
+  </div>
+
+  <div class="cal-grid" id="calGrid"></div>
+
+  <div class="cal-day-detail" id="calDayDetail">
+    <div style="color:var(--text3);font-size:13px;font-style:italic;text-align:center;padding:12px">
+      点击某天查看收支
+    </div>
+  </div>
+
+</div>
+
 <!-- ===== REPORT ===== -->
 <div class="section" id="section-report">
 
@@ -2580,7 +2658,85 @@ document.getElementById('payDate').value = today();
 load().then(() => render());
 </script>
 </body>
-</html><!-- ===== REPORT ===== -->
+</html>
+<!-- ===== CALENDAR ===== -->
+<div class="section" id="section-calendar">
+
+  <!-- Fox + Prince illustration -->
+  <div class="section-illustration" style="display:flex">
+    <svg width="200" height="90" viewBox="0 0 200 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0 78 Q50 72 100 76 Q150 72 200 78 L200 90 L0 90 Z" fill="#e8c840" opacity="0.2"/>
+      <path d="M0 80 Q50 75 100 78 Q150 75 200 80 L200 90 L0 90 Z" fill="#c8a030" opacity="0.25"/>
+      <ellipse cx="148" cy="68" rx="18" ry="10" fill="#d86820"/>
+      <circle cx="164" cy="60" r="10" fill="#d86820"/>
+      <polygon points="158,52 154,42 162,50" fill="#d86820"/>
+      <polygon points="168,52 172,42 164,50" fill="#d86820"/>
+      <ellipse cx="166" cy="63" rx="5" ry="4" fill="#f0c080" opacity="0.8"/>
+      <circle cx="161" cy="59" r="1.5" fill="#2c1a08"/>
+      <circle cx="169" cy="59" r="1.5" fill="#2c1a08"/>
+      <path d="M163 63 Q166 65 169 63" stroke="#2c1a08" stroke-width="1" fill="none" stroke-linecap="round"/>
+      <path d="M130 68 Q118 60 115 70 Q118 80 132 75" fill="#d86820"/>
+      <ellipse cx="116" cy="70" rx="6" ry="5" fill="#f0ece0"/>
+      <rect x="138" y="76" width="5" height="10" rx="2" fill="#c05818"/>
+      <rect x="145" y="76" width="5" height="10" rx="2" fill="#c05818"/>
+      <rect x="153" y="76" width="5" height="10" rx="2" fill="#c05818"/>
+      <rect x="54" y="52" width="10" height="16" rx="2" fill="#f5e0a0"/>
+      <path d="M52 58 Q59 55 66 58" stroke="#b82030" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <rect x="52" y="59" width="14" height="11" rx="2" fill="#f5e040"/>
+      <rect x="53" y="69" width="5" height="11" rx="2" fill="#f5e040" transform="rotate(8 53 69)"/>
+      <rect x="59" y="69" width="5" height="11" rx="2" fill="#f5e040" transform="rotate(-5 59 69)"/>
+      <circle cx="59" cy="46" r="8" fill="#f5e0a0"/>
+      <path d="M52 44 Q54 36 59 38 Q64 36 66 44" fill="#f5d060"/>
+      <circle cx="61" cy="46" r="1.2" fill="#2c1a08"/>
+      <circle cx="56" cy="46" r="1.2" fill="#2c1a08"/>
+      <text x="10" y="20" font-size="9" fill="#c8a030" opacity="0.6">✦</text>
+      <text x="100" y="15" font-size="7" fill="#c8a030" opacity="0.5">✦</text>
+      <text x="185" y="25" font-size="6" fill="#c8a030" opacity="0.4">✦</text>
+    </svg>
+  </div>
+
+  <div class="daily-budget-card">
+    <div class="daily-budget-title">今日预算剩余</div>
+    <div class="daily-budget-row" id="dailyBudgetRow"></div>
+  </div>
+
+  <div class="piggy-card" id="savingsCard">
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <div style="flex:1;text-align:center">
+        <div id="groceryStars" style="font-size:20px;letter-spacing:2px;min-height:28px;margin-bottom:6px"></div>
+        <div class="piggy-title" style="font-size:11px">家庭买菜节省</div>
+        <div class="piggy-amount" id="grocerySaved" style="font-size:28px"><span style="font-size:14px">$ </span>0.00</div>
+      </div>
+      <div style="width:1px;background:rgba(197,163,132,0.2);margin:4px 0"></div>
+      <div style="flex:1;text-align:center">
+        <div id="personalRoses" style="font-size:20px;letter-spacing:2px;min-height:28px;margin-bottom:6px"></div>
+        <div class="piggy-title" style="font-size:11px">个人预算节省</div>
+        <div class="piggy-amount" id="personalSaved" style="font-size:28px"><span style="font-size:14px">$ </span>0.00</div>
+      </div>
+    </div>
+    <div class="piggy-history">
+      <div class="piggy-history-title">每周明细</div>
+      <div id="piggyHistory"></div>
+    </div>
+  </div>
+
+  <div class="cal-nav">
+    <button class="cal-nav-btn" onclick="changeCalMonth(-1)">‹</button>
+    <div class="cal-month-label" id="calMonthLabel"></div>
+    <button class="cal-nav-btn" onclick="changeCalMonth(1)">›</button>
+  </div>
+
+  <div class="cal-grid" id="calGrid"></div>
+
+  <div class="cal-day-detail" id="calDayDetail">
+    <div style="color:var(--text3);font-size:13px;font-style:italic;text-align:center;padding:12px">
+      点击某天查看收支
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== REPORT ===== -->
 <div class="section" id="section-report">
 
   <!-- Period Toggle -->
@@ -3117,6 +3273,7 @@ function renderIncomePage() {
 }
 
 function renderAccountsPage() {
+  if (!document.getElementById("accountsFullGrid")) return;
   const el = document.getElementById('accountsFullGrid');
   el.innerHTML = data.accounts.map(a => {
     const b = parseFloat(a.balance);
@@ -3346,7 +3503,7 @@ function goTo(page) {
     document.getElementById('incDate').value = today();
     renderIncomePage();
   }
-  if (page === 'report') { ui.statsType = ui.statsType||'expense'; setStatsPeriod(ui.reportPeriod||'month'); }
+  if (page === 'report') { ui.statsType = ui.statsType||'expense'; if(typeof setStatsPeriod==='function') setStatsPeriod(ui.reportPeriod||'month'); else renderReport(); }
   if (page === 'overview') renderOverview();
   if (page === 'calendar') renderCalendarPage();
   if (page === 'assets') renderAssets();
@@ -3361,12 +3518,41 @@ function setExpType(type) {
   document.getElementById('paymentFields').style.display = type === 'payment' ? '' : 'none';
 }
 
-function setExpCat(id) {
-  ui.currentExpCat = id;
-  document.querySelectorAll('#expCatWrap .cat-pill').forEach(p => p.classList.remove('active'));
+function setExpCat(catId) {
+  ui.currentExpCat = catId;
+  ui.currentExpSubCat = '';
+  // Update active pill
+  const builtInIds = EXP_CATEGORIES.map(c=>c.id);
+  const extraCats = (data.expCategories||[]).filter(c=>!builtInIds.includes(c.id));
+  const allCats = EXP_CATEGORIES.concat(extraCats);
+  const cat = allCats.find(c=>c.id===catId);
   document.querySelectorAll('#expCatWrap .cat-pill').forEach(p => {
-    if (p.textContent.includes(EXP_CATEGORIES.find(c=>c.id===id)?.label)) p.classList.add('active');
+    p.classList.toggle('active', cat && p.textContent.trim().replace(/^[^\w一-龥]+/,'').includes(cat.label));
   });
+  // Show subcategories
+  const subWrap = document.getElementById('expSubCatWrap');
+  const subPills = document.getElementById('expSubCatPills');
+  if (!subWrap || !subPills) return;
+  const subs = (cat && cat.sub && cat.sub.length) ? cat.sub : [];
+  if (subs.length === 0) {
+    subWrap.style.display = 'none';
+    subPills.innerHTML = '';
+  } else {
+    subWrap.style.display = 'block';
+    subPills.innerHTML = subs.map(s =>
+      '<div class="cat-pill" onclick="setExpSubCat(' + JSON.stringify(s) + ')">' + s + '</div>'
+    ).join('');
+  }
+}
+
+function setExpSubCat(sub) {
+  ui.currentExpSubCat = sub;
+  document.querySelectorAll('#expSubCatPills .cat-pill').forEach(p => {
+    p.classList.toggle('active', p.textContent.trim() === sub);
+  });
+  // Auto-fill note if empty
+  const noteEl = document.getElementById('expNote');
+  if (noteEl && !noteEl.value) noteEl.value = sub;
 }
 
 function setIncCat(cat) {
