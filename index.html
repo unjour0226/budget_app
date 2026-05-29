@@ -2074,7 +2074,7 @@ body[data-page="report"] .stats-summary-value.exp { color: #f0a0b0; }
   <div class="petit-quote">"所有的大人曾经都是小孩，虽然只有少数人记得这一点。"</div>
 </div>
 
-</div><!-- end .content --function setReportPeriod(period) {
+</div><!-- end .content --function _setReportPeriod(period) {
   ui.reportPeriod = period;
   ui.reportPeriodOffset = 0;
   ['week','month','year'].forEach(function(p) {
@@ -2083,7 +2083,7 @@ body[data-page="report"] .stats-summary-value.exp { color: #f0a0b0; }
   });
   renderReport();
 }
-function setStatsPeriod(p) { setReportPeriod(p); }
+function setStatsPeriod(p) { _setReportPeriod(p); }
 function setStatsType(type) {
   ui.statsType = type;
   var expBtn = document.getElementById('stExp');
@@ -2986,6 +2986,10 @@ load().then(() => render());
 <div class="toast" id="toast"></div>
 
 <script>
+// Global aliases (defined early to avoid "not defined" errors)
+function setReportPeriod(p) { if(typeof _setReportPeriod==='function') _setReportPeriod(p); }
+function setStatsPeriod(p) { if(typeof _setReportPeriod==='function') _setReportPeriod(p); }
+
 // ============================================================
 // DATA
 // ============================================================
@@ -3133,6 +3137,19 @@ async function load() {
     const balHistSetting = settings.find(s => s.key === 'balance_history');
     data.balanceHistory = balHistSetting ? JSON.parse(balHistSetting.value) : [];
 
+    // Restore account extras (credit_limit, include_in_net)
+    const accExtrasSetting = settings.find(s => s.key === 'account_extras');
+    if (accExtrasSetting) {
+      const extras = JSON.parse(accExtrasSetting.value);
+      extras.forEach(e => {
+        const acc = data.accounts.find(a => a.id === e.id);
+        if (acc) {
+          acc.credit_limit = e.credit_limit;
+          acc.include_in_net = e.include_in_net;
+        }
+      });
+    }
+
     // If first time, push defaults to Supabase
     if (accs.length === 0) await supa.upsert('pp_accounts', data.accounts);
     if (budgets.length === 0) await supa.upsert('pp_budgets', data.budgets);
@@ -3164,12 +3181,17 @@ async function save() {
   localStorage.setItem('pp_budget_v2', JSON.stringify(data));
   // Save to Supabase in background (don't await)
   try {
+    // Strip fields not in Supabase schema, store extras in settings
+    const accountsForDB = data.accounts.map(a => ({
+      id: a.id, name: a.name, type: a.type, balance: a.balance
+    }));
     await Promise.all([
-      supa.upsert('pp_accounts', data.accounts),
+      supa.upsert('pp_accounts', accountsForDB),
       supa.upsert('pp_budgets', data.budgets),
       supa.upsert('pp_settings', [{key:'inc_categories', value: JSON.stringify(data.incCategories)}]),
       supa.upsert('pp_settings', [{key:'exp_categories', value: JSON.stringify(data.expCategories)}]),
       supa.upsert('pp_settings', [{key:'balance_history', value: JSON.stringify(data.balanceHistory)}]),
+      supa.upsert('pp_settings', [{key:'account_extras', value: JSON.stringify(data.accounts.map(a=>({id:a.id,credit_limit:a.credit_limit,include_in_net:a.include_in_net})))}]),
     ]);
   } catch(e) { console.warn('Supabase save failed, localStorage backup used'); }
 }
@@ -3559,7 +3581,7 @@ function goTo(page) {
     document.getElementById('incDate').value = today();
     renderIncomePage();
   }
-  if (page === 'report') { ui.statsType = ui.statsType||'expense'; setReportPeriod(ui.reportPeriod||'month'); }
+  if (page === 'report') { ui.statsType = ui.statsType||'expense'; _setReportPeriod(ui.reportPeriod||'month'); }
   if (page === 'overview') renderOverview();
   if (page === 'calendar') renderCalendarPage();
   if (page === 'assets') renderAssets();
