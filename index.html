@@ -2192,8 +2192,8 @@ function renderAssets() {
   const cashAccs = accounts.filter(a => a.type !== 'credit');
   const creditAccs = accounts.filter(a => a.type === 'credit');
 
-  const totalAssets = cashAccs.reduce((s,a) => s + Math.max(parseFloat(a.balance), 0), 0);
-  const totalDebts  = creditAccs.reduce((s,a) => s + Math.abs(Math.min(parseFloat(a.balance), 0)), 0);
+  const totalAssets = cashAccs.filter(a=>a.include_in_net!==false).reduce((s,a) => s + Math.max(parseFloat(a.balance), 0), 0);
+  const totalDebts  = creditAccs.filter(a=>a.include_in_net!==false).reduce((s,a) => s + Math.abs(Math.min(parseFloat(a.balance), 0)), 0);
   const netWorth    = totalAssets - totalDebts;
 
   // Net worth card
@@ -2215,9 +2215,10 @@ function renderAssets() {
       const b = parseFloat(a.balance);
       const cls = b > 0 ? 'pos' : (b < 0 ? 'neg' : 'zero');
       const typeLabel = {cash:'现金', debit:'储蓄卡', savings:'储蓄账户', digital:'数字钱包'}[a.type] || a.type;
+      const inNet2 = a.include_in_net !== false;
       return `<div class="asset-row" onclick="openEditAcc('${a.id}')">
         <div class="asset-row-left">
-          <div class="asset-row-name">${a.name}</div>
+          <div class="asset-row-name">${a.name}${!inNet2 ? ' <span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:1px 5px;border-radius:4px">不计入</span>' : ''}</div>
           <div class="asset-row-type">${typeLabel}</div>
         </div>
         <div class="asset-row-balance ${cls}">$${b < 0 ? '-' : ''}${Math.abs(b).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
@@ -2232,21 +2233,43 @@ function renderAssets() {
     return;
   }
   creditGroup.style.display = '';
-  const creditTotal = creditAccs.reduce((s,a) => s + parseFloat(a.balance), 0);
+  const creditOwedTotal = creditAccs.filter(a=>a.include_in_net!==false).reduce((s,a) => s + Math.abs(Math.min(parseFloat(a.balance),0)), 0);
   creditGroup.innerHTML = `
     <div class="asset-group-header">
-      <div class="asset-group-name">信用卡</div>
-      <div class="asset-group-total ${creditTotal>=0?'pos':'neg'}">$${Math.abs(creditTotal).toFixed(2)}</div>
+      <div class="asset-group-name">信用卡 (${creditAccs.length})</div>
+      <div style="text-align:right">
+        <div class="asset-group-total neg">欠款: $${creditOwedTotal.toFixed(2)}</div>
+      </div>
     </div>
     ${creditAccs.map(a => {
       const b = parseFloat(a.balance);
       const cls = b > 0 ? 'pos' : (b < 0 ? 'neg' : 'zero');
-      return `<div class="asset-row" onclick="openEditAcc('${a.id}')">
-        <div class="asset-row-left">
-          <div class="asset-row-name">${a.name}</div>
-          <div class="asset-row-type">信用卡</div>
+      const owed = Math.abs(Math.min(b, 0));
+      const limit = parseFloat(a.credit_limit) || 0;
+      const avail = limit > 0 ? Math.max(limit - owed, 0) : null;
+      const inNet = a.include_in_net !== false;
+      const usedPct = limit > 0 ? Math.min(owed/limit*100, 100) : 0;
+      const barCol = usedPct < 50 ? '#7ec8a0' : usedPct < 80 ? '#E6BE5A' : '#D25064';
+      return `<div class="asset-row" style="flex-direction:column;align-items:stretch;gap:8px" onclick="openEditAcc('${a.id}')">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div class="asset-row-name">${a.name}${!inNet ? ' <span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:1px 5px;border-radius:4px">不计入</span>' : ''}</div>
+            <div class="asset-row-type">信用卡</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-family:'EB Garamond',serif;font-size:18px;color:#D25064">-$${owed.toFixed(2)}</div>
+            ${limit > 0 ? `<div style="font-size:11px;color:#3a7850;margin-top:1px">可用额度: $${avail.toFixed(2)}</div>` : '<div style="font-size:11px;color:var(--text3);margin-top:1px">点击设置额度</div>'}
+          </div>
         </div>
-        <div class="asset-row-balance ${cls}">${b > 0 ? '+' : ''}$${Math.abs(b).toFixed(2)}</div>
+        ${limit > 0 ? `<div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px">
+            <span>已用 $${owed.toFixed(2)} / 总额度 $${limit.toFixed(0)}</span>
+            <span>${usedPct.toFixed(0)}%</span>
+          </div>
+          <div style="height:4px;background:rgba(140,120,180,0.1);border-radius:2px;overflow:hidden">
+            <div style="height:4px;border-radius:2px;background:${barCol};width:${usedPct}%;transition:width 0.4s"></div>
+          </div>
+        </div>` : ''}
       </div>`;
     }).join('')}
   `;
@@ -2334,8 +2357,10 @@ function addNewAccount() {
   const name = document.getElementById('newAccName2').value.trim();
   if (!name) { showToast('请输入账户名称'); return; }
   const type = document.getElementById('newAccType2').value;
-  const bal  = parseFloat(document.getElementById('newAccBal2').value) || 0;
-  data.accounts.push({ id: uid(), name, type, balance: bal });
+  let bal = parseFloat(document.getElementById('newAccBal2').value) || 0;
+  const limit = parseFloat(document.getElementById('newAccLimit')?.value) || 0;
+  if (type === 'credit') bal = -Math.abs(bal);
+  data.accounts.push({ id: uid(), name, type, balance: bal, credit_limit: limit });
   save();
   closeModal('newAccountModal');
   document.getElementById('newAccName2').value = '';
@@ -2815,16 +2840,41 @@ load().then(() => render());
       <label class="form-label">账户</label>
       <div class="form-input" id="editAccName" style="cursor:default;color:var(--text2)"></div>
     </div>
+    <div class="form-group" id="editAccLimitGroup" style="display:none">
+      <label class="form-label">信用额度（Credit Limit）</label>
+      <div class="amount-wrap">
+        <span class="amount-symbol">$</span>
+        <input class="form-input" type="number" id="editAccLimit" inputmode="decimal" placeholder="如：1500">
+      </div>
+    </div>
     <div class="form-group">
-      <label class="form-label">新余额</label>
+      <label class="form-label" id="editAccBalLabel">当前余额</label>
       <div class="amount-wrap">
         <span class="amount-symbol">$</span>
         <input class="form-input" type="number" id="editAccBal" inputmode="decimal">
       </div>
     </div>
+    <div class="form-group" id="editAccOwedGroup" style="display:none">
+      <div style="background:rgba(210,80,100,0.08);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text2)">
+        欠款：<span id="editAccOwed" style="font-family:'EB Garamond',serif;font-size:16px;color:#D25064">$0</span>
+        &nbsp;·&nbsp; 可用：<span id="editAccAvail" style="font-family:'EB Garamond',serif;font-size:16px;color:#3a7850">$0</span>
+      </div>
+    </div>
     <div class="form-group">
       <label class="form-label">备注（可选）</label>
       <input class="form-input" type="text" id="editAccNote" placeholder="如：月底对账、工资到账">
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);margin-top:4px">
+      <div>
+        <div style="font-size:14px;color:var(--text)">计入净资产</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">关闭后此账户不影响净资产计算</div>
+      </div>
+      <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer">
+        <input type="checkbox" id="editAccIncludeNet" style="opacity:0;width:0;height:0">
+        <span id="editAccNetToggle" onclick="toggleNetToggle()" style="position:absolute;inset:0;background:#ccc;border-radius:12px;transition:0.2s;cursor:pointer">
+          <span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:white;border-radius:50%;transition:0.2s" id="editAccNetDot"></span>
+        </span>
+      </label>
     </div>
     <div class="modal-actions">
       <button class="modal-cancel" onclick="closeModal('editAccModal')">取消</button>
@@ -2956,9 +3006,9 @@ const DEFAULT_ACCOUNTS = [
   {id:'gift_money', name:'礼金', type:'cash', balance:0},
   {id:'savings', name:'Savings Account', type:'debit', balance:0},
   {id:'debit', name:'Debit Account', type:'debit', balance:0},
-  {id:'discover', name:'Discover Credit', type:'credit', balance:0},
-  {id:'quicksilver', name:'Quicksilver Credit', type:'credit', balance:0},
-  {id:'savor', name:'Savor Credit', type:'credit', balance:0},
+  {id:'discover', name:'Discover Credit', type:'credit', balance:0, credit_limit:0},
+  {id:'quicksilver', name:'Quicksilver Credit', type:'credit', balance:0, credit_limit:0},
+  {id:'savor', name:'Savor Credit', type:'credit', balance:0, credit_limit:0},
 ];
 
 const DEFAULT_BUDGETS = [
@@ -3711,8 +3761,58 @@ function openEditAcc(id) {
   if (!acc) return;
   document.getElementById('editAccId').value = id;
   document.getElementById('editAccName').textContent = acc.name;
-  document.getElementById('editAccBal').value = acc.balance;
+
+  const isCredit = acc.type === 'credit';
+  const limitGroup = document.getElementById('editAccLimitGroup');
+  const owedGroup = document.getElementById('editAccOwedGroup');
+  const balLabel = document.getElementById('editAccBalLabel');
+
+  if (isCredit) {
+    limitGroup.style.display = 'block';
+    owedGroup.style.display = 'block';
+    balLabel.textContent = '当前欠款';
+    document.getElementById('editAccLimit').value = acc.credit_limit || 0;
+    const owed = Math.abs(parseFloat(acc.balance) || 0);
+    const limit = parseFloat(acc.credit_limit) || 0;
+    document.getElementById('editAccOwed').textContent = '$' + owed.toFixed(2);
+    document.getElementById('editAccAvail').textContent = '$' + Math.max(limit - owed, 0).toFixed(2);
+    document.getElementById('editAccBal').value = owed;
+    // Update owed display on input
+    document.getElementById('editAccBal').oninput = function() {
+      const v = parseFloat(this.value)||0;
+      const lim = parseFloat(document.getElementById('editAccLimit').value)||0;
+      document.getElementById('editAccOwed').textContent = '$'+v.toFixed(2);
+      document.getElementById('editAccAvail').textContent = '$'+Math.max(lim-v,0).toFixed(2);
+    };
+    document.getElementById('editAccLimit').oninput = function() {
+      const v = parseFloat(document.getElementById('editAccBal').value)||0;
+      const lim = parseFloat(this.value)||0;
+      document.getElementById('editAccAvail').textContent = '$'+Math.max(lim-v,0).toFixed(2);
+    };
+  } else {
+    limitGroup.style.display = 'none';
+    owedGroup.style.display = 'none';
+    balLabel.textContent = '当前余额';
+    document.getElementById('editAccBal').value = acc.balance;
+    document.getElementById('editAccBal').oninput = null;
+  }
+  // Set include_in_net toggle
+  const includeNet = acc.include_in_net !== false;
+  const toggle = document.getElementById('editAccNetToggle');
+  const dot = document.getElementById('editAccNetDot');
+  if (toggle && dot) {
+    toggle.style.background = includeNet ? '#8C78B4' : '#ccc';
+    dot.style.transform = includeNet ? 'translateX(20px)' : 'translateX(0)';
+  }
   openModal('editAccModal');
+}
+
+function toggleNetToggle() {
+  const toggle = document.getElementById('editAccNetToggle');
+  const dot = document.getElementById('editAccNetDot');
+  const isOn = toggle.style.background === 'rgb(140, 120, 180)';
+  toggle.style.background = isOn ? '#ccc' : '#8C78B4';
+  dot.style.transform = isOn ? 'translateX(0)' : 'translateX(20px)';
 }
 
 function saveAccBalance() {
@@ -3720,7 +3820,14 @@ function saveAccBalance() {
   const acc = data.accounts.find(a=>a.id===id);
   if (!acc) return;
   const oldBal = parseFloat(acc.balance);
-  const newBal = parseFloat(document.getElementById('editAccBal').value) || 0;
+  let newBal = parseFloat(document.getElementById('editAccBal').value) || 0;
+  if (acc.type === 'credit') {
+    // Save credit limit
+    const limit = parseFloat(document.getElementById('editAccLimit').value) || 0;
+    acc.credit_limit = limit;
+    // Store balance as negative (owed amount)
+    newBal = -Math.abs(newBal);
+  }
   acc.balance = newBal;
   // Record balance history
   data.balanceHistory.push({
@@ -3732,6 +3839,9 @@ function saveAccBalance() {
     date: new Date().toISOString(),
     note: document.getElementById('editAccNote') ? document.getElementById('editAccNote').value.trim() : '',
   });
+  // Save include_in_net
+  const toggle = document.getElementById('editAccNetToggle');
+  acc.include_in_net = toggle ? toggle.style.background === 'rgb(140, 120, 180)' : true;
   save();
   closeModal('editAccModal');
   renderAssets();
@@ -3924,8 +4034,8 @@ function renderAssets() {
   const cashAccs = accounts.filter(a => a.type !== 'credit');
   const creditAccs = accounts.filter(a => a.type === 'credit');
 
-  const totalAssets = cashAccs.reduce((s,a) => s + Math.max(parseFloat(a.balance), 0), 0);
-  const totalDebts  = creditAccs.reduce((s,a) => s + Math.abs(Math.min(parseFloat(a.balance), 0)), 0);
+  const totalAssets = cashAccs.filter(a=>a.include_in_net!==false).reduce((s,a) => s + Math.max(parseFloat(a.balance), 0), 0);
+  const totalDebts  = creditAccs.filter(a=>a.include_in_net!==false).reduce((s,a) => s + Math.abs(Math.min(parseFloat(a.balance), 0)), 0);
   const netWorth    = totalAssets - totalDebts;
 
   // Net worth card
@@ -3947,9 +4057,10 @@ function renderAssets() {
       const b = parseFloat(a.balance);
       const cls = b > 0 ? 'pos' : (b < 0 ? 'neg' : 'zero');
       const typeLabel = {cash:'现金', debit:'储蓄卡', savings:'储蓄账户', digital:'数字钱包'}[a.type] || a.type;
+      const inNet2 = a.include_in_net !== false;
       return `<div class="asset-row" onclick="openEditAcc('${a.id}')">
         <div class="asset-row-left">
-          <div class="asset-row-name">${a.name}</div>
+          <div class="asset-row-name">${a.name}${!inNet2 ? ' <span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:1px 5px;border-radius:4px">不计入</span>' : ''}</div>
           <div class="asset-row-type">${typeLabel}</div>
         </div>
         <div class="asset-row-balance ${cls}">$${b < 0 ? '-' : ''}${Math.abs(b).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
@@ -3964,21 +4075,43 @@ function renderAssets() {
     return;
   }
   creditGroup.style.display = '';
-  const creditTotal = creditAccs.reduce((s,a) => s + parseFloat(a.balance), 0);
+  const creditOwedTotal = creditAccs.filter(a=>a.include_in_net!==false).reduce((s,a) => s + Math.abs(Math.min(parseFloat(a.balance),0)), 0);
   creditGroup.innerHTML = `
     <div class="asset-group-header">
-      <div class="asset-group-name">信用卡</div>
-      <div class="asset-group-total ${creditTotal>=0?'pos':'neg'}">$${Math.abs(creditTotal).toFixed(2)}</div>
+      <div class="asset-group-name">信用卡 (${creditAccs.length})</div>
+      <div style="text-align:right">
+        <div class="asset-group-total neg">欠款: $${creditOwedTotal.toFixed(2)}</div>
+      </div>
     </div>
     ${creditAccs.map(a => {
       const b = parseFloat(a.balance);
       const cls = b > 0 ? 'pos' : (b < 0 ? 'neg' : 'zero');
-      return `<div class="asset-row" onclick="openEditAcc('${a.id}')">
-        <div class="asset-row-left">
-          <div class="asset-row-name">${a.name}</div>
-          <div class="asset-row-type">信用卡</div>
+      const owed = Math.abs(Math.min(b, 0));
+      const limit = parseFloat(a.credit_limit) || 0;
+      const avail = limit > 0 ? Math.max(limit - owed, 0) : null;
+      const inNet = a.include_in_net !== false;
+      const usedPct = limit > 0 ? Math.min(owed/limit*100, 100) : 0;
+      const barCol = usedPct < 50 ? '#7ec8a0' : usedPct < 80 ? '#E6BE5A' : '#D25064';
+      return `<div class="asset-row" style="flex-direction:column;align-items:stretch;gap:8px" onclick="openEditAcc('${a.id}')">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div class="asset-row-name">${a.name}${!inNet ? ' <span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:1px 5px;border-radius:4px">不计入</span>' : ''}</div>
+            <div class="asset-row-type">信用卡</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-family:'EB Garamond',serif;font-size:18px;color:#D25064">-$${owed.toFixed(2)}</div>
+            ${limit > 0 ? `<div style="font-size:11px;color:#3a7850;margin-top:1px">可用额度: $${avail.toFixed(2)}</div>` : '<div style="font-size:11px;color:var(--text3);margin-top:1px">点击设置额度</div>'}
+          </div>
         </div>
-        <div class="asset-row-balance ${cls}">${b > 0 ? '+' : ''}$${Math.abs(b).toFixed(2)}</div>
+        ${limit > 0 ? `<div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px">
+            <span>已用 $${owed.toFixed(2)} / 总额度 $${limit.toFixed(0)}</span>
+            <span>${usedPct.toFixed(0)}%</span>
+          </div>
+          <div style="height:4px;background:rgba(140,120,180,0.1);border-radius:2px;overflow:hidden">
+            <div style="height:4px;border-radius:2px;background:${barCol};width:${usedPct}%;transition:width 0.4s"></div>
+          </div>
+        </div>` : ''}
       </div>`;
     }).join('')}
   `;
@@ -4066,8 +4199,10 @@ function addNewAccount() {
   const name = document.getElementById('newAccName2').value.trim();
   if (!name) { showToast('请输入账户名称'); return; }
   const type = document.getElementById('newAccType2').value;
-  const bal  = parseFloat(document.getElementById('newAccBal2').value) || 0;
-  data.accounts.push({ id: uid(), name, type, balance: bal });
+  let bal = parseFloat(document.getElementById('newAccBal2').value) || 0;
+  const limit = parseFloat(document.getElementById('newAccLimit')?.value) || 0;
+  if (type === 'credit') bal = -Math.abs(bal);
+  data.accounts.push({ id: uid(), name, type, balance: bal, credit_limit: limit });
   save();
   closeModal('newAccountModal');
   document.getElementById('newAccName2').value = '';
