@@ -1550,6 +1550,74 @@ body[data-page="report"] .stats-summary-label { color: rgba(140,120,180,0.5); }
 body[data-page="report"] .stats-summary-value { color: #e8e4f4; }
 body[data-page="report"] .stats-summary-value.inc { color: #90e8b0; }
 body[data-page="report"] .stats-summary-value.exp { color: #f0a0b0; }
+
+/* ===== STICKER PICKER ===== */
+.sticker-picker-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 400;
+  display: none;
+  align-items: flex-end;
+  backdrop-filter: blur(4px);
+}
+.sticker-picker-overlay.open { display: flex; }
+
+.sticker-picker {
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 20px 16px 40px;
+  width: 100%;
+}
+
+.sticker-picker-title {
+  font-family: 'EB Garamond', serif;
+  font-size: 16px; font-style: italic;
+  color: var(--text2);
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.sticker-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.sticker-option {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.2s;
+  background: rgba(140,120,180,0.05);
+  display: flex; align-items: center; justify-content: center;
+}
+.sticker-option:hover { border-color: #8C78B4; transform: scale(1.05); }
+.sticker-option.selected { border-color: #8C78B4; background: rgba(140,120,180,0.1); }
+.sticker-option img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
+
+.sticker-none {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  border: 2px dashed rgba(140,120,180,0.3);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; color: var(--text3);
+  transition: all 0.2s;
+}
+.sticker-none:hover { border-color: #8C78B4; color: #8C78B4; }
+
+/* Cat pill with sticker */
+.cat-pill-inner {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 3px;
+}
+.cat-pill-sticker {
+  width: 32px; height: 32px;
+  object-fit: contain;
+}
 </style>
 </head>
 <body data-page="overview">
@@ -2074,7 +2142,7 @@ body[data-page="report"] .stats-summary-value.exp { color: #f0a0b0; }
   <div class="petit-quote">"所有的大人曾经都是小孩，虽然只有少数人记得这一点。"</div>
 </div>
 
-</div><!-- end .content --function _setReportPeriod(period) {
+</div><!-- end .content --function setReportPeriod(period) {
   ui.reportPeriod = period;
   ui.reportPeriodOffset = 0;
   ['week','month','year'].forEach(function(p) {
@@ -2083,7 +2151,7 @@ body[data-page="report"] .stats-summary-value.exp { color: #f0a0b0; }
   });
   renderReport();
 }
-function setStatsPeriod(p) { _setReportPeriod(p); }
+
 function setStatsType(type) {
   ui.statsType = type;
   var expBtn = document.getElementById('stExp');
@@ -2398,27 +2466,63 @@ function deleteExpCat(id) {
 function renderExpCatModalList() {
   const el = document.getElementById('expCatModalList');
   if (!el) return;
-  // Built-in (non-deletable)
-  const builtInHtml = EXP_CATEGORIES.map(c => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-      <div>
-        <div style="font-size:14px;color:var(--text)">${c.emoji||''} ${c.label}</div>
-        ${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}
+
+  // Built-in cats - show with editable sub
+  const builtInHtml = EXP_CATEGORIES.map(c => {
+    // Check if user has overridden sub for this built-in
+    const override = (data.expCatOverrides||{})[c.id];
+    const subs = override !== undefined ? override : (c.sub||[]);
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:14px;color:var(--text);font-weight:500">${c.label}</div>
+        <span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:2px 6px;border-radius:4px">内置</span>
       </div>
-      <span style="font-size:10px;color:var(--text3);letter-spacing:0.05em">内置</span>
-    </div>
-  `).join('');
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">
+        ${subs.map(s => `<span style="background:rgba(140,120,180,0.1);border:1px solid rgba(140,120,180,0.2);border-radius:12px;padding:3px 10px;font-size:12px;color:var(--text2);display:inline-flex;align-items:center;gap:4px">
+          ${s}
+          <button onclick="removeBuiltInSub('${c.id}','${s}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0;line-height:1">×</button>
+        </span>`).join('')}
+        <button onclick="addBuiltInSub('${c.id}')" style="background:rgba(140,120,180,0.08);border:1px dashed rgba(140,120,180,0.3);border-radius:12px;padding:3px 10px;font-size:12px;color:#8C78B4;cursor:pointer">+ 添加</button>
+      </div>
+    </div>`;
+  }).join('');
+
   // Custom (deletable)
-  const customHtml = (data.expCategories||[]).map(c => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-      <div>
-        <div style="font-size:14px;color:var(--text)">${c.label}</div>
-        ${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}
+  const customHtml = (data.expCategories||[]).length > 0 ?
+    '<div style="font-size:11px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;padding:10px 0 6px">自定义分类</div>' +
+    (data.expCategories||[]).map(c => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:14px;color:var(--text)">${c.label}</div>
+          ${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}
+        </div>
+        <button onclick="deleteExpCat('${c.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
       </div>
-      <button onclick="deleteExpCat('${c.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
-    </div>
-  `).join('') || '<div style="color:var(--text3);font-size:13px;padding:8px 0">还没有自定义分类</div>';
+    `).join('') : '';
+
   el.innerHTML = builtInHtml + customHtml;
+}
+
+function addBuiltInSub(catId) {
+  const sub = prompt('添加子分类：');
+  if (!sub || !sub.trim()) return;
+  if (!data.expCatOverrides) data.expCatOverrides = {};
+  const cat = EXP_CATEGORIES.find(c=>c.id===catId);
+  const current = data.expCatOverrides[catId] !== undefined ? data.expCatOverrides[catId] : (cat?.sub||[]);
+  if (!current.includes(sub.trim())) {
+    data.expCatOverrides[catId] = [...current, sub.trim()];
+    save();
+  }
+  renderExpCatModalList();
+}
+
+function removeBuiltInSub(catId, sub) {
+  if (!data.expCatOverrides) data.expCatOverrides = {};
+  const cat = EXP_CATEGORIES.find(c=>c.id===catId);
+  const current = data.expCatOverrides[catId] !== undefined ? data.expCatOverrides[catId] : (cat?.sub||[]);
+  data.expCatOverrides[catId] = current.filter(s=>s!==sub);
+  save();
+  renderExpCatModalList();
 }
 
 // ============================================================
@@ -2678,6 +2782,54 @@ function changeCalMonth(delta) {
   renderCalendar();
 }
 
+
+// ============================================================
+// STICKER PICKER
+// ============================================================
+const STICKER_COUNT = 20;
+const STICKER_BASE = 'stickers/sticker_';
+
+let _stickerCallback = null;
+let _currentStickerCatId = null;
+
+function openStickerPicker(catId, callback) {
+  _currentStickerCatId = catId;
+  _stickerCallback = callback;
+
+  const grid = document.getElementById('stickerGrid');
+  const currentSticker = (data.catStickers||{})[catId] || null;
+
+  let html = `<div class="sticker-none" onclick="selectSticker(null)" title="无贴纸">✕</div>`;
+  for (let i = 1; i <= STICKER_COUNT; i++) {
+    const num = String(i).padStart(2, '0');
+    const src = STICKER_BASE + num + '.png';
+    const sel = currentSticker === src ? ' selected' : '';
+    html += `<div class="sticker-option${sel}" onclick="selectSticker('${src}')">
+      <img src="${src}" alt="sticker ${num}" loading="lazy">
+    </div>`;
+  }
+  grid.innerHTML = html;
+  document.getElementById('stickerPickerOverlay').classList.add('open');
+}
+
+function selectSticker(src) {
+  if (!data.catStickers) data.catStickers = {};
+  if (src) {
+    data.catStickers[_currentStickerCatId] = src;
+  } else {
+    delete data.catStickers[_currentStickerCatId];
+  }
+  save();
+  document.getElementById('stickerPickerOverlay').classList.remove('open');
+  if (_stickerCallback) _stickerCallback();
+  renderExpensePage();
+  renderIncomePage();
+}
+
+document.getElementById('stickerPickerOverlay').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
 // ============================================================
 // INIT
 // ============================================================
@@ -2686,6 +2838,19 @@ document.getElementById('expDate').value = today();
 document.getElementById('incDate').value = today();
 document.getElementById('trfDate').value = today();
 document.getElementById('payDate').value = today();
+// Mark period function as ready
+window._doSetReportPeriod = function(period) {
+  ui.reportPeriod = period;
+  ui.reportPeriodOffset = 0;
+  ['week','month','year'].forEach(function(p) {
+    var btn = document.getElementById('sp'+p.charAt(0).toUpperCase()+p.slice(1));
+    if (btn) btn.classList.toggle('active', p===period);
+  });
+  renderReport();
+};
+window._reportPeriodReady = true;
+if (_pendingPeriod) { window._doSetReportPeriod(_pendingPeriod); _pendingPeriod = null; }
+
 load().then(() => render());
 </script>
 </body>
@@ -2983,26 +3148,41 @@ load().then(() => render());
     </div>
   </div>
 </div>
+
+<!-- Sticker Picker -->
+<div class="sticker-picker-overlay" id="stickerPickerOverlay">
+  <div class="sticker-picker">
+    <div class="sticker-picker-title">选择贴纸</div>
+    <div class="sticker-grid" id="stickerGrid"></div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
-// Global aliases (defined early to avoid "not defined" errors)
-function setReportPeriod(p) { if(typeof _setReportPeriod==='function') _setReportPeriod(p); }
-function setStatsPeriod(p) { if(typeof _setReportPeriod==='function') _setReportPeriod(p); }
+// Defer period setting until DOM+JS fully loaded
+var _pendingPeriod = null;
+function setReportPeriod(p) {
+  if (window._reportPeriodReady) {
+    window._doSetReportPeriod(p);
+  } else {
+    _pendingPeriod = p;
+  }
+}
+function setStatsPeriod(p) { setReportPeriod(p); }
 
 // ============================================================
 // DATA
 // ============================================================
 const EXP_CATEGORIES = [
-  {id:'groceries', label:'买菜', emoji:'🥬'},
-  {id:'dining', label:'餐饮', emoji:'🍜'},
-  {id:'transport', label:'交通', emoji:'🚇'},
-  {id:'shopping', label:'购物', emoji:'🛍️'},
-  {id:'entertainment', label:'娱乐', emoji:'🎮'},
-  {id:'health', label:'医疗', emoji:'💊'},
-  {id:'bills', label:'账单', emoji:'📋'},
-  {id:'gift', label:'礼物', emoji:'🎁'},
-  {id:'other', label:'其他', emoji:'📦'},
+  {id:'groceries', label:'买菜', icon:'✦', sub:['超市','农贸市场','网购食材']},
+  {id:'dining', label:'餐饮', icon:'✦', sub:['外卖','餐厅','咖啡','快餐']},
+  {id:'transport', label:'交通', icon:'✦', sub:['地铁','打车','公交','加油','停车']},
+  {id:'shopping', label:'购物', icon:'✦', sub:['衣服','日用品','电子','家居']},
+  {id:'entertainment', label:'娱乐', icon:'✦', sub:['电影','游玩','订阅','健身']},
+  {id:'health', label:'医疗', icon:'✦', sub:['药品','看诊','保险']},
+  {id:'bills', label:'账单', icon:'✦', sub:['房租','水电','网络','手机']},
+  {id:'gift', label:'礼物', icon:'✦', sub:['生日','节日','婚礼']},
+  {id:'other', label:'其他', icon:'✦', sub:[]},
 ];
 
 const DEFAULT_ACCOUNTS = [
@@ -3023,17 +3203,7 @@ const DEFAULT_BUDGETS = [
 const DEFAULT_INC_CATS = ['工资','奖金','副业','礼金','报销','其他'];
 
 // Expense categories with optional subcategories
-const DEFAULT_EXP_CATS = [
-  {id:'groceries', label:'买菜', sub:[]},
-  {id:'dining', label:'餐饮', sub:['外卖','餐厅','咖啡']},
-  {id:'transport', label:'交通', sub:['地铁','打车','加油']},
-  {id:'shopping', label:'购物', sub:['衣服','日用品','电子']},
-  {id:'entertainment', label:'娱乐', sub:['游玩','电影','订阅']},
-  {id:'health', label:'医疗', sub:[]},
-  {id:'bills', label:'账单', sub:['房租','水电','网络']},
-  {id:'gift', label:'礼物', sub:[]},
-  {id:'other', label:'其他', sub:[]},
-];
+// DEFAULT_EXP_CATS replaced by EXP_CATEGORIES above
 
 let data = {
   accounts: [],
@@ -3041,6 +3211,8 @@ let data = {
   budgets: [],
   incCategories: [],
   expCategories: [],
+  expCatOverrides: {},
+  catStickers: {},
   balanceHistory: [],
 };
 
@@ -3137,6 +3309,12 @@ async function load() {
     const balHistSetting = settings.find(s => s.key === 'balance_history');
     data.balanceHistory = balHistSetting ? JSON.parse(balHistSetting.value) : [];
 
+    const overridesSetting = settings.find(s => s.key === 'exp_cat_overrides');
+    data.expCatOverrides = overridesSetting ? JSON.parse(overridesSetting.value) : {};
+
+    const stickersSetting = settings.find(s => s.key === 'cat_stickers');
+    data.catStickers = stickersSetting ? JSON.parse(stickersSetting.value) : {};
+
     // Restore account extras (credit_limit, include_in_net)
     const accExtrasSetting = settings.find(s => s.key === 'account_extras');
     if (accExtrasSetting) {
@@ -3192,6 +3370,8 @@ async function save() {
       supa.upsert('pp_settings', [{key:'exp_categories', value: JSON.stringify(data.expCategories)}]),
       supa.upsert('pp_settings', [{key:'balance_history', value: JSON.stringify(data.balanceHistory)}]),
       supa.upsert('pp_settings', [{key:'account_extras', value: JSON.stringify(data.accounts.map(a=>({id:a.id,credit_limit:a.credit_limit,include_in_net:a.include_in_net})))}]),
+      supa.upsert('pp_settings', [{key:'exp_cat_overrides', value: JSON.stringify(data.expCatOverrides||{})}]),
+      supa.upsert('pp_settings', [{key:'cat_stickers', value: JSON.stringify(data.catStickers||{})}]),
     ]);
   } catch(e) { console.warn('Supabase save failed, localStorage backup used'); }
 }
@@ -3309,9 +3489,16 @@ function renderExpensePage() {
   const builtInIds = EXP_CATEGORIES.map(c=>c.id);
   const extraCats = (data.expCategories||[]).filter(c => !builtInIds.includes(c.id));
   const allExpCats = EXP_CATEGORIES.concat(extraCats);
-  expWrap.innerHTML = allExpCats.map(c =>
-    `<div class="cat-pill ${ui.currentExpCat === c.id ? 'active' : ''}" onclick="setExpCat('${c.id}')">${c.emoji ? c.emoji+' ' : ''}${c.label}</div>`
-  ).join('');
+  expWrap.innerHTML = allExpCats.map(c => {
+    const sticker = (data.catStickers||{})[c.id];
+    return `<div class="cat-pill ${ui.currentExpCat === c.id ? 'active' : ''}" style="padding:6px 10px">
+      <div class="cat-pill-inner">
+        ${sticker ? `<img class="cat-pill-sticker" src="${sticker}" alt="${c.label}">` : ''}
+        <span>${c.label}</span>
+      </div>
+    </div>
+    <div onclick="openStickerPicker('${c.id}', null)" style="font-size:10px;color:var(--text3);text-align:center;cursor:pointer;margin-bottom:4px">贴纸</div>`;
+  }).join('');
 
   // Account selects
   const allAccOpts = data.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
@@ -3335,9 +3522,16 @@ function renderExpensePage() {
 
 function renderIncomePage() {
   const incWrap = document.getElementById('incCatWrap');
-  incWrap.innerHTML = data.incCategories.map(c =>
-    `<div class="cat-pill ${ui.currentIncCat === c ? 'active' : ''}" onclick="setIncCat('${c}')">${c}</div>`
-  ).join('');
+  incWrap.innerHTML = data.incCategories.map(c => {
+    const sticker = (data.catStickers||{})['inc_'+c];
+    return `<div class="cat-pill ${ui.currentIncCat === c ? 'active' : ''}" style="padding:6px 10px">
+      <div class="cat-pill-inner" onclick="setIncCat('${c}')">
+        ${sticker ? `<img class="cat-pill-sticker" src="${sticker}" alt="${c}">` : ''}
+        <span>${c}</span>
+      </div>
+    </div>
+    <div onclick="openStickerPicker('inc_${c}', null)" style="font-size:10px;color:var(--text3);text-align:center;cursor:pointer;margin-bottom:4px">贴纸</div>`;
+  }).join('');
 
   const accOpts = data.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
   document.getElementById('incAccount').innerHTML = accOpts;
@@ -3472,7 +3666,11 @@ function renderReport() {
 
   listEl.innerHTML = sorted.map(function(entry, i) {
     var catId = entry[0], catData = entry[1];
-    var cat = allCats.find(function(c){return c.id===catId;}) || { label: catId };
+    var cat = Object.assign({}, allCats.find(function(c){return c.id===catId;}) || { label: catId });
+    // Apply override subs
+    if (cat && data.expCatOverrides && data.expCatOverrides[cat.id]) {
+      cat = Object.assign({}, cat, {sub: data.expCatOverrides[cat.id]});
+    }
     var pct = total > 0 ? (catData.amount/total*100).toFixed(1) : 0;
     var color = COLORS[i % COLORS.length];
     var subItems = Object.entries(catData.subs).sort(function(a,b){return b[1].amount-a[1].amount;});
@@ -3520,22 +3718,23 @@ function renderGroupedTxs(txs) {
 }
 
 function renderTxItem(t) {
-  let emoji = '📦', label = '', amtCls = 'exp', sign = '-';
+  let txIcon = '', label = '', amtCls = 'exp', sign = '-';
+  const allExpCats2 = EXP_CATEGORIES.concat((data.expCategories||[]).filter(c=>!EXP_CATEGORIES.find(b=>b.id===c.id)));
 
   if (t.type === 'expense') {
-    const cat = EXP_CATEGORIES.find(c => c.id === t.category);
-    emoji = cat ? cat.emoji : '📦';
-    label = cat ? cat.label : t.category;
+    const cat = allExpCats2.find(c => c.id === t.category);
+    label = cat ? cat.label : (t.category || '其他');
+    txIcon = label.charAt(0);
     amtCls = 'exp'; sign = '-';
   } else if (t.type === 'income') {
-    emoji = '✨';
-    label = t.category;
+    txIcon = '＋';
+    label = t.category || '收入';
     amtCls = 'inc'; sign = '+';
   } else if (t.type === 'transfer') {
-    emoji = '↔️'; label = '转账';
+    txIcon = '⇄'; label = '转账';
     amtCls = 'trf'; sign = '';
   } else if (t.type === 'payment') {
-    emoji = '💳'; label = '还款';
+    txIcon = '↩'; label = '还款';
     amtCls = 'pay'; sign = '';
   }
 
@@ -3545,7 +3744,7 @@ function renderTxItem(t) {
     (t.account_id ? (data.accounts.find(a=>a.id===t.account_id)||{}).name || '' : '');
 
   return `<div class="tx-item">
-    <div class="tx-icon" style="background:rgba(160,80,30,0.06)">${emoji}</div>
+    <div class="tx-icon" style="background:rgba(140,120,180,0.08);font-family:'EB Garamond',serif;font-size:14px;color:var(--text2)">${txIcon}</div>
     <div class="tx-body">
       <div class="tx-note">${t.note || label}</div>
       <div class="tx-meta">${label}${accName ? ' · '+accName : ''}</div>
@@ -3581,7 +3780,7 @@ function goTo(page) {
     document.getElementById('incDate').value = today();
     renderIncomePage();
   }
-  if (page === 'report') { ui.statsType = ui.statsType||'expense'; _setReportPeriod(ui.reportPeriod||'month'); }
+  if (page === 'report') { ui.statsType = ui.statsType||'expense'; setReportPeriod(ui.reportPeriod||'month'); }
   if (page === 'overview') renderOverview();
   if (page === 'calendar') renderCalendarPage();
   if (page === 'assets') renderAssets();
@@ -3611,7 +3810,9 @@ function setExpCat(catId) {
   const subWrap = document.getElementById('expSubCatWrap');
   const subPills = document.getElementById('expSubCatPills');
   if (!subWrap || !subPills) return;
-  const subs = (cat && cat.sub && cat.sub.length) ? cat.sub : [];
+  // Use override subs if available
+  const override = (data.expCatOverrides||{})[catId];
+  const subs = override !== undefined ? override : (cat && cat.sub ? cat.sub : []);
   if (subs.length === 0) {
     subWrap.style.display = 'none';
     subPills.innerHTML = '';
@@ -4262,27 +4463,63 @@ function deleteExpCat(id) {
 function renderExpCatModalList() {
   const el = document.getElementById('expCatModalList');
   if (!el) return;
-  // Built-in (non-deletable)
-  const builtInHtml = EXP_CATEGORIES.map(c => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-      <div>
-        <div style="font-size:14px;color:var(--text)">${c.emoji||''} ${c.label}</div>
-        ${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}
+
+  // Built-in cats - show with editable sub
+  const builtInHtml = EXP_CATEGORIES.map(c => {
+    // Check if user has overridden sub for this built-in
+    const override = (data.expCatOverrides||{})[c.id];
+    const subs = override !== undefined ? override : (c.sub||[]);
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:14px;color:var(--text);font-weight:500">${c.label}</div>
+        <span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:2px 6px;border-radius:4px">内置</span>
       </div>
-      <span style="font-size:10px;color:var(--text3);letter-spacing:0.05em">内置</span>
-    </div>
-  `).join('');
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">
+        ${subs.map(s => `<span style="background:rgba(140,120,180,0.1);border:1px solid rgba(140,120,180,0.2);border-radius:12px;padding:3px 10px;font-size:12px;color:var(--text2);display:inline-flex;align-items:center;gap:4px">
+          ${s}
+          <button onclick="removeBuiltInSub('${c.id}','${s}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0;line-height:1">×</button>
+        </span>`).join('')}
+        <button onclick="addBuiltInSub('${c.id}')" style="background:rgba(140,120,180,0.08);border:1px dashed rgba(140,120,180,0.3);border-radius:12px;padding:3px 10px;font-size:12px;color:#8C78B4;cursor:pointer">+ 添加</button>
+      </div>
+    </div>`;
+  }).join('');
+
   // Custom (deletable)
-  const customHtml = (data.expCategories||[]).map(c => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-      <div>
-        <div style="font-size:14px;color:var(--text)">${c.label}</div>
-        ${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}
+  const customHtml = (data.expCategories||[]).length > 0 ?
+    '<div style="font-size:11px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;padding:10px 0 6px">自定义分类</div>' +
+    (data.expCategories||[]).map(c => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:14px;color:var(--text)">${c.label}</div>
+          ${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}
+        </div>
+        <button onclick="deleteExpCat('${c.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
       </div>
-      <button onclick="deleteExpCat('${c.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
-    </div>
-  `).join('') || '<div style="color:var(--text3);font-size:13px;padding:8px 0">还没有自定义分类</div>';
+    `).join('') : '';
+
   el.innerHTML = builtInHtml + customHtml;
+}
+
+function addBuiltInSub(catId) {
+  const sub = prompt('添加子分类：');
+  if (!sub || !sub.trim()) return;
+  if (!data.expCatOverrides) data.expCatOverrides = {};
+  const cat = EXP_CATEGORIES.find(c=>c.id===catId);
+  const current = data.expCatOverrides[catId] !== undefined ? data.expCatOverrides[catId] : (cat?.sub||[]);
+  if (!current.includes(sub.trim())) {
+    data.expCatOverrides[catId] = [...current, sub.trim()];
+    save();
+  }
+  renderExpCatModalList();
+}
+
+function removeBuiltInSub(catId, sub) {
+  if (!data.expCatOverrides) data.expCatOverrides = {};
+  const cat = EXP_CATEGORIES.find(c=>c.id===catId);
+  const current = data.expCatOverrides[catId] !== undefined ? data.expCatOverrides[catId] : (cat?.sub||[]);
+  data.expCatOverrides[catId] = current.filter(s=>s!==sub);
+  save();
+  renderExpCatModalList();
 }
 
 // ============================================================
@@ -4542,6 +4779,54 @@ function changeCalMonth(delta) {
   renderCalendar();
 }
 
+
+// ============================================================
+// STICKER PICKER
+// ============================================================
+const STICKER_COUNT = 20;
+const STICKER_BASE = 'stickers/sticker_';
+
+let _stickerCallback = null;
+let _currentStickerCatId = null;
+
+function openStickerPicker(catId, callback) {
+  _currentStickerCatId = catId;
+  _stickerCallback = callback;
+
+  const grid = document.getElementById('stickerGrid');
+  const currentSticker = (data.catStickers||{})[catId] || null;
+
+  let html = `<div class="sticker-none" onclick="selectSticker(null)" title="无贴纸">✕</div>`;
+  for (let i = 1; i <= STICKER_COUNT; i++) {
+    const num = String(i).padStart(2, '0');
+    const src = STICKER_BASE + num + '.png';
+    const sel = currentSticker === src ? ' selected' : '';
+    html += `<div class="sticker-option${sel}" onclick="selectSticker('${src}')">
+      <img src="${src}" alt="sticker ${num}" loading="lazy">
+    </div>`;
+  }
+  grid.innerHTML = html;
+  document.getElementById('stickerPickerOverlay').classList.add('open');
+}
+
+function selectSticker(src) {
+  if (!data.catStickers) data.catStickers = {};
+  if (src) {
+    data.catStickers[_currentStickerCatId] = src;
+  } else {
+    delete data.catStickers[_currentStickerCatId];
+  }
+  save();
+  document.getElementById('stickerPickerOverlay').classList.remove('open');
+  if (_stickerCallback) _stickerCallback();
+  renderExpensePage();
+  renderIncomePage();
+}
+
+document.getElementById('stickerPickerOverlay').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
 // ============================================================
 // INIT
 // ============================================================
@@ -4550,6 +4835,19 @@ document.getElementById('expDate').value = today();
 document.getElementById('incDate').value = today();
 document.getElementById('trfDate').value = today();
 document.getElementById('payDate').value = today();
+// Mark period function as ready
+window._doSetReportPeriod = function(period) {
+  ui.reportPeriod = period;
+  ui.reportPeriodOffset = 0;
+  ['week','month','year'].forEach(function(p) {
+    var btn = document.getElementById('sp'+p.charAt(0).toUpperCase()+p.slice(1));
+    if (btn) btn.classList.toggle('active', p===period);
+  });
+  renderReport();
+};
+window._reportPeriodReady = true;
+if (_pendingPeriod) { window._doSetReportPeriod(_pendingPeriod); _pendingPeriod = null; }
+
 load().then(() => render());
 </script>
 </body>
