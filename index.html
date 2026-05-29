@@ -2113,6 +2113,8 @@ body[data-page="report"] .stats-summary-value.exp { color: #f0a0b0; }
       </div>
     </div>
   </div>
+  <!-- Color Legend -->
+  <div id="donutLegend" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px;padding:0 8px"></div>
 
   <!-- Expense / Income toggle -->
   <div class="stats-type-row">
@@ -2472,9 +2474,15 @@ function renderExpCatModalList() {
     // Check if user has overridden sub for this built-in
     const override = (data.expCatOverrides||{})[c.id];
     const subs = override !== undefined ? override : (c.sub||[]);
+    const stickerSrc = (data.catStickers||{})[c.id];
     return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div style="font-size:14px;color:var(--text);font-weight:500">${c.label}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div onclick="openStickerPicker('${c.id}', renderExpCatModalList)" style="width:40px;height:40px;border-radius:10px;border:1px dashed rgba(140,120,180,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0" title="点击选择贴纸">
+            ${stickerSrc ? `<img src="${stickerSrc}" style="width:36px;height:36px;object-fit:contain">` : '<span style="font-size:18px;color:var(--text3)">+</span>'}
+          </div>
+          <div style="font-size:14px;color:var(--text);font-weight:500">${c.label}</div>
+        </div>
         <span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:2px 6px;border-radius:4px">内置</span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">
@@ -2492,9 +2500,14 @@ function renderExpCatModalList() {
     '<div style="font-size:11px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;padding:10px 0 6px">自定义分类</div>' +
     (data.expCategories||[]).map(c => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div>
-          <div style="font-size:14px;color:var(--text)">${c.label}</div>
-          ${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}
+        <div style="display:flex;align-items:center;gap:8px">
+          <div onclick="openStickerPicker('${c.id}', renderExpCatModalList)" style="width:40px;height:40px;border-radius:10px;border:1px dashed rgba(140,120,180,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+            ${(data.catStickers||{})[c.id] ? `<img src="${(data.catStickers||{})[c.id]}" style="width:36px;height:36px;object-fit:contain">` : '<span style="font-size:18px;color:var(--text3)">+</span>'}
+          </div>
+          <div>
+            <div style="font-size:14px;color:var(--text)">${c.label}</div>
+            ${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}
+          </div>
         </div>
         <button onclick="deleteExpCat('${c.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
       </div>
@@ -2962,6 +2975,8 @@ load().then(() => render());
       </div>
     </div>
   </div>
+  <!-- Color Legend -->
+  <div id="donutLegend" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px;padding:0 8px"></div>
 
   <!-- Expense / Income toggle -->
   <div class="stats-type-row">
@@ -3491,13 +3506,10 @@ function renderExpensePage() {
   const allExpCats = EXP_CATEGORIES.concat(extraCats);
   expWrap.innerHTML = allExpCats.map(c => {
     const sticker = (data.catStickers||{})[c.id];
-    return `<div class="cat-pill ${ui.currentExpCat === c.id ? 'active' : ''}" style="padding:6px 10px">
-      <div class="cat-pill-inner">
-        ${sticker ? `<img class="cat-pill-sticker" src="${sticker}" alt="${c.label}">` : ''}
-        <span>${c.label}</span>
-      </div>
-    </div>
-    <div onclick="openStickerPicker('${c.id}', null)" style="font-size:10px;color:var(--text3);text-align:center;cursor:pointer;margin-bottom:4px">贴纸</div>`;
+    return `<div class="cat-pill ${ui.currentExpCat === c.id ? 'active' : ''}" onclick="setExpCat('${c.id}')" style="padding:${sticker?'5px 10px':'8px 14px'}">
+      ${sticker ? `<img class="cat-pill-sticker" src="${sticker}" alt="${c.label}" style="width:28px;height:28px;object-fit:contain;display:block;margin:0 auto 2px">` : ''}
+      <span style="font-size:12px">${c.label}</span>
+    </div>`;
   }).join('');
 
   // Account selects
@@ -3524,13 +3536,10 @@ function renderIncomePage() {
   const incWrap = document.getElementById('incCatWrap');
   incWrap.innerHTML = data.incCategories.map(c => {
     const sticker = (data.catStickers||{})['inc_'+c];
-    return `<div class="cat-pill ${ui.currentIncCat === c ? 'active' : ''}" style="padding:6px 10px">
-      <div class="cat-pill-inner" onclick="setIncCat('${c}')">
-        ${sticker ? `<img class="cat-pill-sticker" src="${sticker}" alt="${c}">` : ''}
-        <span>${c}</span>
-      </div>
-    </div>
-    <div onclick="openStickerPicker('inc_${c}', null)" style="font-size:10px;color:var(--text3);text-align:center;cursor:pointer;margin-bottom:4px">贴纸</div>`;
+    return `<div class="cat-pill ${ui.currentIncCat === c ? 'active' : ''}" onclick="setIncCat('${c}')" style="padding:${sticker?'5px 10px':'8px 14px'}">
+      ${sticker ? `<img class="cat-pill-sticker" src="${sticker}" alt="${c}" style="width:28px;height:28px;object-fit:contain;display:block;margin:0 auto 2px">` : ''}
+      <span style="font-size:12px">${c}</span>
+    </div>`;
   }).join('');
 
   const accOpts = data.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
@@ -3631,9 +3640,12 @@ function renderReport() {
   if (donutLblEl) donutLblEl.textContent = type === 'expense' ? '总支出' : '总收入';
   if (donutAmtEl) donutAmtEl.textContent = total > 0 ? '$' + total.toFixed(0) : '$0';
 
+  const legendEl = document.getElementById('donutLegend');
+
   if (arcsEl) {
     if (total === 0 || sorted.length === 0) {
       arcsEl.innerHTML = '<circle cx="100" cy="100" r="70" fill="none" stroke="rgba(140,120,180,0.15)" stroke-width="32"/>';
+      if (legendEl) legendEl.innerHTML = '';
     } else {
       var svgArcs = '';
       var cumAngle = -Math.PI / 2;
@@ -3653,6 +3665,22 @@ function renderReport() {
         cumAngle += angle;
       });
       arcsEl.innerHTML = svgArcs;
+
+      // Render legend
+      if (legendEl) {
+        legendEl.innerHTML = sorted.map(function(entry, i) {
+          var catId = entry[0], catData = entry[1];
+          var cat = allCats.find(function(c){return c.id===catId;}) || { label: catId };
+          var color = COLORS[i % COLORS.length];
+          var pct = total > 0 ? (catData.amount/total*100).toFixed(0) : 0;
+          var stickerSrc = (data.catStickers||{})[catId];
+          return '<div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.06);border-radius:20px;padding:4px 10px 4px 6px">' +
+            '<div style="width:10px;height:10px;border-radius:50%;background:' + color + ';flex-shrink:0"></div>' +
+            '<span style="font-size:12px;color:var(--text2)">' + cat.label + '</span>' +
+            '<span style="font-size:11px;color:var(--text3)">' + pct + '%</span>' +
+            '</div>';
+        }).join('');
+      }
     }
   }
 
@@ -3721,14 +3749,17 @@ function renderTxItem(t) {
   let txIcon = '', label = '', amtCls = 'exp', sign = '-';
   const allExpCats2 = EXP_CATEGORIES.concat((data.expCategories||[]).filter(c=>!EXP_CATEGORIES.find(b=>b.id===c.id)));
 
+  let stickerSrc = null;
   if (t.type === 'expense') {
     const cat = allExpCats2.find(c => c.id === t.category);
     label = cat ? cat.label : (t.category || '其他');
     txIcon = label.charAt(0);
+    stickerSrc = (data.catStickers||{})[t.category] || null;
     amtCls = 'exp'; sign = '-';
   } else if (t.type === 'income') {
     txIcon = '＋';
     label = t.category || '收入';
+    stickerSrc = (data.catStickers||{})['inc_'+t.category] || null;
     amtCls = 'inc'; sign = '+';
   } else if (t.type === 'transfer') {
     txIcon = '⇄'; label = '转账';
@@ -3744,7 +3775,7 @@ function renderTxItem(t) {
     (t.account_id ? (data.accounts.find(a=>a.id===t.account_id)||{}).name || '' : '');
 
   return `<div class="tx-item">
-    <div class="tx-icon" style="background:rgba(140,120,180,0.08);font-family:'EB Garamond',serif;font-size:14px;color:var(--text2)">${txIcon}</div>
+    <div class="tx-icon" style="background:rgba(140,120,180,0.08);font-family:'EB Garamond',serif;font-size:14px;color:var(--text2);overflow:hidden;padding:${stickerSrc?'2px':'0'}">${stickerSrc ? `<img src="${stickerSrc}" style="width:100%;height:100%;object-fit:contain">` : txIcon}</div>
     <div class="tx-body">
       <div class="tx-note">${t.note || label}</div>
       <div class="tx-meta">${label}${accName ? ' · '+accName : ''}</div>
@@ -4136,12 +4167,18 @@ function openIncCatModal() {
 
 function renderIncCatList() {
   const el = document.getElementById('incCatList');
-  el.innerHTML = data.incCategories.map(c => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)">
-      <span style="font-size:14px;color:var(--text2)">${c}</span>
+  el.innerHTML = data.incCategories.map(c => {
+    const stickerSrc = (data.catStickers||{})['inc_'+c];
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div onclick="openStickerPicker('inc_${c}', renderIncCatList)" style="width:36px;height:36px;border-radius:9px;border:1px dashed rgba(140,120,180,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+          ${stickerSrc ? `<img src="${stickerSrc}" style="width:32px;height:32px;object-fit:contain">` : '<span style="font-size:16px;color:var(--text3)">+</span>'}
+        </div>
+        <span style="font-size:14px;color:var(--text2)">${c}</span>
+      </div>
       <button onclick="deleteIncCat('${c}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 4px">×</button>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function addIncCat() {
@@ -4469,9 +4506,15 @@ function renderExpCatModalList() {
     // Check if user has overridden sub for this built-in
     const override = (data.expCatOverrides||{})[c.id];
     const subs = override !== undefined ? override : (c.sub||[]);
+    const stickerSrc = (data.catStickers||{})[c.id];
     return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div style="font-size:14px;color:var(--text);font-weight:500">${c.label}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div onclick="openStickerPicker('${c.id}', renderExpCatModalList)" style="width:40px;height:40px;border-radius:10px;border:1px dashed rgba(140,120,180,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0" title="点击选择贴纸">
+            ${stickerSrc ? `<img src="${stickerSrc}" style="width:36px;height:36px;object-fit:contain">` : '<span style="font-size:18px;color:var(--text3)">+</span>'}
+          </div>
+          <div style="font-size:14px;color:var(--text);font-weight:500">${c.label}</div>
+        </div>
         <span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:2px 6px;border-radius:4px">内置</span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">
@@ -4489,9 +4532,14 @@ function renderExpCatModalList() {
     '<div style="font-size:11px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;padding:10px 0 6px">自定义分类</div>' +
     (data.expCategories||[]).map(c => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div>
-          <div style="font-size:14px;color:var(--text)">${c.label}</div>
-          ${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}
+        <div style="display:flex;align-items:center;gap:8px">
+          <div onclick="openStickerPicker('${c.id}', renderExpCatModalList)" style="width:40px;height:40px;border-radius:10px;border:1px dashed rgba(140,120,180,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+            ${(data.catStickers||{})[c.id] ? `<img src="${(data.catStickers||{})[c.id]}" style="width:36px;height:36px;object-fit:contain">` : '<span style="font-size:18px;color:var(--text3)">+</span>'}
+          </div>
+          <div>
+            <div style="font-size:14px;color:var(--text)">${c.label}</div>
+            ${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}
+          </div>
         </div>
         <button onclick="deleteExpCat('${c.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
       </div>
