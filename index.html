@@ -2812,15 +2812,33 @@ function openStickerPicker(catId, callback) {
   const grid = document.getElementById('stickerGrid');
   const currentSticker = (data.catStickers||{})[catId] || null;
 
-  let html = `<div class="sticker-none" onclick="selectSticker(null)" title="无贴纸">✕</div>`;
-  for (let i = 1; i <= STICKER_COUNT; i++) {
+  // Group label style
+  const groupLabel = (text) => `<div style="grid-column:1/-1;font-size:10px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;padding:8px 2px 4px">${text}</div>`;
+
+  let html = `<div class="sticker-none" onclick="selectSticker(null)" title="清除">✕</div>`;
+
+  // Set 1: sticker_01 - sticker_20
+  html += groupLabel('套装一');
+  for (let i = 1; i <= 20; i++) {
     const num = String(i).padStart(2, '0');
-    const src = STICKER_BASE + num + '.png';
+    const src = 'stickers/sticker_' + num + '.png';
     const sel = currentSticker === src ? ' selected' : '';
     html += `<div class="sticker-option${sel}" onclick="selectSticker('${src}')">
       <img src="${src}" alt="sticker ${num}" loading="lazy">
     </div>`;
   }
+
+  // Set 2: little_prince_icon_01 - little_prince_icon_21
+  html += groupLabel('套装二');
+  for (let i = 1; i <= 21; i++) {
+    const num = String(i).padStart(2, '0');
+    const src = 'stickers/little_prince_icon_' + num + '.png';
+    const sel = currentSticker === src ? ' selected' : '';
+    html += `<div class="sticker-option${sel}" onclick="selectSticker('${src}')">
+      <img src="${src}" alt="icon ${num}" loading="lazy">
+    </div>`;
+  }
+
   grid.innerHTML = html;
   document.getElementById('stickerPickerOverlay').classList.add('open');
 }
@@ -4844,15 +4862,33 @@ function openStickerPicker(catId, callback) {
   const grid = document.getElementById('stickerGrid');
   const currentSticker = (data.catStickers||{})[catId] || null;
 
-  let html = `<div class="sticker-none" onclick="selectSticker(null)" title="无贴纸">✕</div>`;
-  for (let i = 1; i <= STICKER_COUNT; i++) {
+  // Group label style
+  const groupLabel = (text) => `<div style="grid-column:1/-1;font-size:10px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;padding:8px 2px 4px">${text}</div>`;
+
+  let html = `<div class="sticker-none" onclick="selectSticker(null)" title="清除">✕</div>`;
+
+  // Set 1: sticker_01 - sticker_20
+  html += groupLabel('套装一');
+  for (let i = 1; i <= 20; i++) {
     const num = String(i).padStart(2, '0');
-    const src = STICKER_BASE + num + '.png';
+    const src = 'stickers/sticker_' + num + '.png';
     const sel = currentSticker === src ? ' selected' : '';
     html += `<div class="sticker-option${sel}" onclick="selectSticker('${src}')">
       <img src="${src}" alt="sticker ${num}" loading="lazy">
     </div>`;
   }
+
+  // Set 2: little_prince_icon_01 - little_prince_icon_21
+  html += groupLabel('套装二');
+  for (let i = 1; i <= 21; i++) {
+    const num = String(i).padStart(2, '0');
+    const src = 'stickers/little_prince_icon_' + num + '.png';
+    const sel = currentSticker === src ? ' selected' : '';
+    html += `<div class="sticker-option${sel}" onclick="selectSticker('${src}')">
+      <img src="${src}" alt="icon ${num}" loading="lazy">
+    </div>`;
+  }
+
   grid.innerHTML = html;
   document.getElementById('stickerPickerOverlay').classList.add('open');
 }
