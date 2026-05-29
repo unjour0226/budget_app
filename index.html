@@ -169,7 +169,7 @@ body {
 }
 
 /* SECTIONS */
-.section { display: none; padding: 16px 16px 100px; }
+.section { display: none; padding: 16px 16px 100px; position: relative; z-index: 1; }
 .section.active { display: block; }
 
 /* ===== OVERVIEW ===== */
@@ -1330,6 +1330,8 @@ body[data-page="report"] .section { padding-top: 8px; }
   padding: 4px;
   margin-bottom: 12px;
   gap: 2px;
+  position: relative;
+  z-index: 2;
 }
 .stats-period-btn {
   flex: 1; padding: 8px 4px;
@@ -1341,6 +1343,8 @@ body[data-page="report"] .section { padding-top: 8px; }
   color: rgba(140,120,180,0.6);
   font-family: 'Noto Serif SC', serif;
   transition: all 0.2s;
+  position: relative;
+  z-index: 2;
 }
 .stats-period-btn.active {
   background: #fff;
@@ -1370,6 +1374,8 @@ body[data-page="report"] .stats-period-btn.active {
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: all 0.2s;
+  position: relative;
+  z-index: 2;
 }
 .stats-nav-btn:hover { background: rgba(140,120,180,0.2); }
 body[data-page="report"] .stats-nav-btn { background: rgba(140,120,180,0.15); color: #b0a0d0; }
@@ -2014,9 +2020,9 @@ body[data-page="report"] .stats-summary-value.exp { color: #f0a0b0; }
 
   <!-- Period Toggle -->
   <div class="stats-period-row">
-    <button class="stats-period-btn active" id="spWeek" onclick="setStatsPeriod('week')">周</button>
-    <button class="stats-period-btn" id="spMonth" onclick="setStatsPeriod('month')">月</button>
-    <button class="stats-period-btn" id="spYear" onclick="setStatsPeriod('year')">年</button>
+    <button class="stats-period-btn active" id="spWeek" onclick="setReportPeriod('week')">周</button>
+    <button class="stats-period-btn" id="spMonth" onclick="setReportPeriod('month')">月</button>
+    <button class="stats-period-btn" id="spYear" onclick="setReportPeriod('year')">年</button>
   </div>
 
   <!-- Period Nav -->
@@ -2068,7 +2074,7 @@ body[data-page="report"] .stats-summary-value.exp { color: #f0a0b0; }
   <div class="petit-quote">"所有的大人曾经都是小孩，虽然只有少数人记得这一点。"</div>
 </div>
 
-</div><!-- end .content --function setStatsPeriod(period) {
+</div><!-- end .content --function setReportPeriod(period) {
   ui.reportPeriod = period;
   ui.reportPeriodOffset = 0;
   ['week','month','year'].forEach(function(p) {
@@ -2077,7 +2083,7 @@ body[data-page="report"] .stats-summary-value.exp { color: #f0a0b0; }
   });
   renderReport();
 }
-function setReportPeriod(p) { setStatsPeriod(p); }
+function setStatsPeriod(p) { setReportPeriod(p); }
 function setStatsType(type) {
   ui.statsType = type;
   var expBtn = document.getElementById('stExp');
@@ -2741,9 +2747,9 @@ load().then(() => render());
 
   <!-- Period Toggle -->
   <div class="stats-period-row">
-    <button class="stats-period-btn active" id="spWeek" onclick="setStatsPeriod('week')">周</button>
-    <button class="stats-period-btn" id="spMonth" onclick="setStatsPeriod('month')">月</button>
-    <button class="stats-period-btn" id="spYear" onclick="setStatsPeriod('year')">年</button>
+    <button class="stats-period-btn active" id="spWeek" onclick="setReportPeriod('week')">周</button>
+    <button class="stats-period-btn" id="spMonth" onclick="setReportPeriod('month')">月</button>
+    <button class="stats-period-btn" id="spYear" onclick="setReportPeriod('year')">年</button>
   </div>
 
   <!-- Period Nav -->
@@ -3503,7 +3509,7 @@ function goTo(page) {
     document.getElementById('incDate').value = today();
     renderIncomePage();
   }
-  if (page === 'report') { ui.statsType = ui.statsType||'expense'; if(typeof setStatsPeriod==='function') setStatsPeriod(ui.reportPeriod||'month'); else renderReport(); }
+  if (page === 'report') { ui.statsType = ui.statsType||'expense'; setReportPeriod(ui.reportPeriod||'month'); }
   if (page === 'overview') renderOverview();
   if (page === 'calendar') renderCalendarPage();
   if (page === 'assets') renderAssets();
