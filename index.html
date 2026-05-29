@@ -1300,6 +1300,25 @@ body[data-page="assets"] .nav-btn.active {
   transition: all 0.2s;
 }
 .add-account-btn:hover { background: rgba(140,120,180,0.06); border-color: #8C78B4; }
+
+.bal-history-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.bal-history-left { flex: 1; min-width: 0; }
+.bal-history-acc { font-size: 13px; color: var(--text); }
+.bal-history-date { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.bal-history-note { font-size: 11px; color: var(--text3); font-style: italic; }
+.bal-history-right { text-align: right; flex-shrink: 0; }
+.bal-history-new { font-family: 'EB Garamond', serif; font-size: 17px; color: var(--text); }
+.bal-history-old { font-size: 11px; color: var(--text3); }
 </style>
 </head>
 <body data-page="overview">
@@ -1323,7 +1342,6 @@ body[data-page="assets"] .nav-btn.active {
     <button class="nav-btn active" onclick="goTo('overview')">总览</button>
     <button class="nav-btn" onclick="goTo('expense')">支出</button>
     <button class="nav-btn" onclick="goTo('income')">收入</button>
-    <button class="nav-btn" onclick="goTo('accounts')">账户</button>
     <button class="nav-btn" onclick="goTo('assets')">资产</button>
     <button class="nav-btn" onclick="goTo('calendar')">日历</button>
     <button class="nav-btn" onclick="goTo('report')">月报</button>
@@ -1624,261 +1642,6 @@ body[data-page="assets"] .nav-btn.active {
   <div class="tx-list" id="incTxList"></div>
 </div>
 
-<!-- ===== ACCOUNTS ===== -->
-<div class="section" id="section-accounts">
-
-  <!-- Fox under stars -->
-  <div class="section-illustration" style="display:flex">
-    <svg width="160" height="90" viewBox="0 0 160 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- Stars -->
-      <circle cx="25" cy="12" r="1.5" fill="#e8c840" opacity="0.8"/>
-      <circle cx="55" cy="6" r="1" fill="#e8c840" opacity="0.7"/>
-      <circle cx="90" cy="10" r="1.8" fill="#e8c840" opacity="0.9"/>
-      <circle cx="125" cy="8" r="1.2" fill="#e8c840" opacity="0.6"/>
-      <circle cx="145" cy="18" r="1" fill="#e8c840" opacity="0.7"/>
-      <text x="35" y="28" font-size="9" fill="#e8c840" opacity="0.6">✦</text>
-      <text x="108" y="22" font-size="7" fill="#e8c840" opacity="0.5">✦</text>
-      <text x="10" y="40" font-size="6" fill="#e8c840" opacity="0.4">✦</text>
-      <!-- Ground -->
-      <path d="M0 80 Q80 72 160 80 L160 90 L0 90Z" fill="#2a2060" opacity="0.4"/>
-      <!-- Fox sitting -->
-      <ellipse cx="80" cy="72" rx="16" ry="10" fill="#d86820"/>
-      <!-- Fox head -->
-      <circle cx="80" cy="58" r="11" fill="#d86820"/>
-      <!-- Ears -->
-      <polygon points="73,48 69,36 77,47" fill="#d86820"/>
-      <polygon points="87,48 91,36 83,47" fill="#d86820"/>
-      <polygon points="73,48 70,38 77,47" fill="#e8a060" opacity="0.6"/>
-      <polygon points="87,48 90,38 83,47" fill="#e8a060" opacity="0.6"/>
-      <!-- Face -->
-      <ellipse cx="80" cy="62" rx="6" ry="5" fill="#f0c080" opacity="0.8"/>
-      <!-- Eyes looking up at stars -->
-      <ellipse cx="75" cy="56" rx="1.5" ry="1.8" fill="#2c1a08"/>
-      <ellipse cx="85" cy="56" rx="1.5" ry="1.8" fill="#2c1a08"/>
-      <circle cx="75.5" cy="55.5" r="0.5" fill="white"/>
-      <circle cx="85.5" cy="55.5" r="0.5" fill="white"/>
-      <!-- Smile -->
-      <path d="M76 62 Q80 65 84 62" stroke="#2c1a08" stroke-width="1" fill="none" stroke-linecap="round"/>
-      <!-- Tail curled around -->
-      <path d="M64 72 Q52 65 50 75 Q52 84 66 80" fill="#d86820"/>
-      <ellipse cx="51" cy="75" rx="5" ry="5" fill="#f5e0c0"/>
-      <!-- Legs -->
-      <rect x="68" y="79" width="6" height="8" rx="2.5" fill="#c05818"/>
-      <rect x="76" y="79" width="6" height="8" rx="2.5" fill="#c05818"/>
-      <rect x="84" y="79" width="6" height="8" rx="2.5" fill="#c05818"/>
-    </svg>
-  </div>
-
-  <div class="accounts-full-grid" id="accountsFullGrid"></div>
-  <button class="secondary-btn" onclick="openModal('editBudgetModal')" style="margin-bottom:14px">🎯 设置每周预算</button>
-</div>
-
-<!-- ===== REPORT ===== -->
-<div class="section" id="section-report">
-
-  <!-- Starry night prince -->
-  <div class="section-illustration" style="display:flex">
-    <svg width="160" height="90" viewBox="0 0 160 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- Stars -->
-      <circle cx="20" cy="15" r="1.5" fill="#f5e060" opacity="0.9"/>
-      <circle cx="45" cy="8" r="1" fill="#f5e060" opacity="0.7"/>
-      <circle cx="80" cy="5" r="2" fill="#f5e060" opacity="0.8"/>
-      <circle cx="110" cy="12" r="1.2" fill="#f5e060" opacity="0.6"/>
-      <circle cx="140" cy="8" r="1.5" fill="#f5e060" opacity="0.9"/>
-      <circle cx="130" cy="25" r="1" fill="#f5e060" opacity="0.5"/>
-      <circle cx="30" cy="30" r="1" fill="#f5e060" opacity="0.6"/>
-      <circle cx="15" cy="50" r="1.2" fill="#f5e060" opacity="0.4"/>
-      <circle cx="150" cy="40" r="1" fill="#f5e060" opacity="0.5"/>
-      <text x="58" y="22" font-size="10" fill="#f5e060" opacity="0.8">✦</text>
-      <text x="95" y="30" font-size="8" fill="#f5e060" opacity="0.6">✦</text>
-      <text x="10" y="35" font-size="7" fill="#f5e060" opacity="0.5">✦</text>
-      <text x="140" y="50" font-size="7" fill="#f5e060" opacity="0.4">✦</text>
-      <!-- Planet -->
-      <ellipse cx="80" cy="78" rx="45" ry="13" fill="#2a2060" opacity="0.8"/>
-      <ellipse cx="80" cy="78" rx="45" ry="13" fill="url(#nightPlanet)"/>
-      <defs>
-        <radialGradient id="nightPlanet" cx="35%" cy="30%">
-          <stop offset="0%" stop-color="#4040a0"/>
-          <stop offset="100%" stop-color="#18163a"/>
-        </radialGradient>
-      </defs>
-      <!-- Prince sitting looking at stars -->
-      <rect x="73" y="54" width="8" height="14" rx="2" fill="#f5e0a0"/>
-      <path d="M71 59 Q80 56 89 59" stroke="#b82030" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <path d="M71 59 Q68 64 70 70" stroke="#b82030" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <rect x="71" y="61" width="12" height="9" rx="2" fill="#f5e040"/>
-      <!-- Legs dangling -->
-      <rect x="72" y="69" width="4" height="9" rx="2" fill="#f5e040" transform="rotate(15 72 69)"/>
-      <rect x="78" y="69" width="4" height="9" rx="2" fill="#f5e040" transform="rotate(-10 78 69)"/>
-      <rect x="70" y="76" width="6" height="3" rx="1.5" fill="#2c1a08" transform="rotate(15 70 76)"/>
-      <rect x="78" y="77" width="6" height="3" rx="1.5" fill="#2c1a08" transform="rotate(-10 78 77)"/>
-      <!-- Head tilted up looking at stars -->
-      <circle cx="77" cy="48" r="8" fill="#f5e0a0"/>
-      <path d="M70 46 Q72 38 77 40 Q82 38 84 46" fill="#f5d060" stroke="#e0b820" stroke-width="0.5"/>
-      <!-- Eyes looking up -->
-      <ellipse cx="74" cy="47" rx="1.2" ry="1.5" fill="#2c1a08"/>
-      <ellipse cx="80" cy="47" rx="1.2" ry="1.5" fill="#2c1a08"/>
-      <!-- Wonder expression -->
-      <circle cx="74.5" cy="46.5" r="0.4" fill="white"/>
-      <circle cx="80.5" cy="46.5" r="0.4" fill="white"/>
-    </svg>
-  </div>
-
-  <div class="report-month-nav">
-    <button class="month-nav-btn" onclick="changeReportMonth(-1)">‹</button>
-    <div class="month-label" id="reportMonthLabel"></div>
-    <button class="month-nav-btn" onclick="changeReportMonth(1)">›</button>
-  </div>
-
-  <div class="report-summary-grid">
-    <div class="report-stat-card">
-      <div class="report-stat-label">总收入</div>
-      <div class="report-stat-value inc" id="rptInc">$0</div>
-    </div>
-    <div class="report-stat-card">
-      <div class="report-stat-label">总支出</div>
-      <div class="report-stat-value exp" id="rptExp">$0</div>
-    </div>
-    <div class="report-stat-card">
-      <div class="report-stat-label">净结余</div>
-      <div class="report-stat-value" id="rptNet">$0</div>
-    </div>
-    <div class="report-stat-card">
-      <div class="report-stat-label">记录笔数</div>
-      <div class="report-stat-value" id="rptCount">0</div>
-    </div>
-  </div>
-
-  <div class="form-card">
-    <div class="form-card-title">支出分类</div>
-    <div id="rptExpCats"></div>
-  </div>
-
-  <div class="form-card">
-    <div class="form-card-title">收入来源</div>
-    <div id="rptIncCats"></div>
-  </div>
-
-  <div class="petit-quote">"所有的大人曾经都是小孩，虽然只有少数人记得这一点。"</div>
-</div>
-
-
-<!-- ===== CALENDAR ===== -->
-<div class="section" id="section-calendar">
-
-  <!-- Fox illustration -->
-  <div class="section-illustration" style="display:flex">
-    <svg width="200" height="90" viewBox="0 0 200 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- Desert ground -->
-      <path d="M0 78 Q50 72 100 76 Q150 72 200 78 L200 90 L0 90 Z" fill="#e8c840" opacity="0.2"/>
-      <path d="M0 80 Q50 75 100 78 Q150 75 200 80 L200 90 L0 90 Z" fill="#c8a030" opacity="0.25"/>
-      <!-- Distant dunes -->
-      <ellipse cx="30" cy="80" rx="40" ry="8" fill="#e8b840" opacity="0.15"/>
-      <ellipse cx="160" cy="80" rx="50" ry="9" fill="#e8b840" opacity="0.15"/>
-
-      <!-- FOX body -->
-      <ellipse cx="148" cy="68" rx="18" ry="10" fill="#d86820"/>
-      <!-- Fox head -->
-      <circle cx="164" cy="60" r="10" fill="#d86820"/>
-      <!-- Fox ears (pointy) -->
-      <polygon points="158,52 154,42 162,50" fill="#d86820"/>
-      <polygon points="168,52 172,42 164,50" fill="#d86820"/>
-      <polygon points="159,52 155,44 162,51" fill="#e8a060" opacity="0.7"/>
-      <polygon points="168,52 171,44 164,51" fill="#e8a060" opacity="0.7"/>
-      <!-- Fox face -->
-      <ellipse cx="166" cy="63" rx="5" ry="4" fill="#f0c080" opacity="0.8"/>
-      <circle cx="161" cy="59" r="1.5" fill="#2c1a08"/>
-      <circle cx="169" cy="59" r="1.5" fill="#2c1a08"/>
-      <circle cx="161.5" cy="58.5" r="0.5" fill="white"/>
-      <circle cx="169.5" cy="58.5" r="0.5" fill="white"/>
-      <path d="M163 63 Q166 65 169 63" stroke="#2c1a08" stroke-width="1" fill="none" stroke-linecap="round"/>
-      <!-- Whiskers -->
-      <line x1="170" y1="62" x2="178" y2="61" stroke="#2c1a08" stroke-width="0.8" opacity="0.5"/>
-      <line x1="170" y1="63.5" x2="178" y2="63.5" stroke="#2c1a08" stroke-width="0.8" opacity="0.5"/>
-      <!-- Fox tail -->
-      <path d="M130 68 Q118 60 115 70 Q118 80 132 75" fill="#d86820"/>
-      <ellipse cx="116" cy="70" rx="6" ry="5" fill="#f0ece0"/>
-      <!-- Fox legs -->
-      <rect x="138" y="76" width="5" height="10" rx="2" fill="#c05818"/>
-      <rect x="145" y="76" width="5" height="10" rx="2" fill="#c05818"/>
-      <rect x="153" y="76" width="5" height="10" rx="2" fill="#c05818"/>
-
-      <!-- LITTLE PRINCE walking -->
-      <!-- Body -->
-      <rect x="54" y="52" width="10" height="16" rx="2" fill="#f5e0a0"/>
-      <!-- Scarf -->
-      <path d="M52 58 Q59 55 66 58" stroke="#b82030" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <path d="M52 58 Q49 64 51 70" stroke="#b82030" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <!-- Coat -->
-      <rect x="52" y="59" width="14" height="11" rx="2" fill="#f5e040"/>
-      <line x1="59" y1="59" x2="59" y2="70" stroke="#d4b820" stroke-width="1"/>
-      <!-- Walking legs -->
-      <rect x="53" y="69" width="5" height="11" rx="2" fill="#f5e040" transform="rotate(8 53 69)"/>
-      <rect x="59" y="69" width="5" height="11" rx="2" fill="#f5e040" transform="rotate(-5 59 69)"/>
-      <!-- Boots -->
-      <rect x="51" y="78" width="7" height="4" rx="1.5" fill="#2c1a08" transform="rotate(8 51 78)"/>
-      <rect x="59" y="79" width="7" height="4" rx="1.5" fill="#2c1a08" transform="rotate(-5 59 79)"/>
-      <!-- Head -->
-      <circle cx="59" cy="46" r="8" fill="#f5e0a0"/>
-      <!-- Hair -->
-      <path d="M52 44 Q54 36 59 38 Q64 36 66 44" fill="#f5d060" stroke="#e0b820" stroke-width="0.5"/>
-      <!-- Eyes looking at fox -->
-      <circle cx="61" cy="46" r="1.2" fill="#2c1a08"/>
-      <circle cx="56" cy="46" r="1.2" fill="#2c1a08"/>
-      <!-- Smile -->
-      <path d="M56 49 Q59 51 62 49" stroke="#c07808" stroke-width="1" fill="none" stroke-linecap="round"/>
-
-      <!-- Stars -->
-      <text x="10" y="20" font-size="9" fill="#c8a030" opacity="0.6">✦</text>
-      <text x="100" y="15" font-size="7" fill="#c8a030" opacity="0.5">✦</text>
-      <text x="185" y="25" font-size="6" fill="#c8a030" opacity="0.4">✦</text>
-    </svg>
-  </div>
-
-
-  <div class="daily-budget-card">
-    <div class="daily-budget-title">今日预算剩余</div>
-    <div class="daily-budget-row" id="dailyBudgetRow"></div>
-  </div>
-
-  <div class="piggy-card" id="savingsCard">
-    <div style="display:flex;gap:10px;margin-bottom:16px">
-      <!-- 家庭买菜 savings -->
-      <div style="flex:1;text-align:center">
-        <div id="groceryStars" style="font-size:20px;letter-spacing:2px;min-height:28px;margin-bottom:6px"></div>
-        <div class="piggy-title" style="font-size:11px">家庭买菜节省</div>
-        <div class="piggy-amount" id="grocerySaved" style="font-size:28px"><span style="font-size:14px">$ </span>0.00</div>
-      </div>
-      <div style="width:1px;background:rgba(197,163,132,0.2);margin:4px 0"></div>
-      <!-- 个人预算 savings -->
-      <div style="flex:1;text-align:center">
-        <div id="personalRoses" style="font-size:20px;letter-spacing:2px;min-height:28px;margin-bottom:6px"></div>
-        <div class="piggy-title" style="font-size:11px">个人预算节省</div>
-        <div class="piggy-amount" id="personalSaved" style="font-size:28px"><span style="font-size:14px">$ </span>0.00</div>
-      </div>
-    </div>
-    <div class="piggy-history">
-      <div class="piggy-history-title">每周明细</div>
-      <div id="piggyHistory"></div>
-    </div>
-  </div>
-
-  <div class="cal-nav">
-    <button class="cal-nav-btn" onclick="changeCalMonth(-1)">‹</button>
-    <div class="cal-month-label" id="calMonthLabel"></div>
-    <button class="cal-nav-btn" onclick="changeCalMonth(1)">›</button>
-  </div>
-
-  <div class="cal-grid" id="calGrid"></div>
-
-  <div class="cal-day-detail" id="calDayDetail">
-    <div style="color:var(--text3);font-size:13px;font-style:italic;text-align:center;padding:12px">
-      点击某天查看收支
-    </div>
-  </div>
-
-</div>
-
 <!-- ===== ASSETS ===== -->
 <div class="section" id="section-assets">
 
@@ -1928,6 +1691,24 @@ body[data-page="assets"] .nav-btn.active {
   <!-- Add Account -->
   <button class="add-account-btn" onclick="openModal('newAccountModal')">＋ 添加账户</button>
 
+  <!-- Budget Management -->
+  <div class="section-title" style="margin-top:8px">每周预算</div>
+  <div class="asset-group" id="assetBudgetGroup"></div>
+  <button class="add-account-btn" onclick="openModal('editBudgetModal')" style="margin-top:8px">⚙ 管理预算</button>
+
+  <!-- Category Management -->
+  <div class="section-title" style="margin-top:8px">支出分类</div>
+  <div class="asset-group" id="expCatGroup"></div>
+  <button class="add-account-btn" onclick="openModal('expCatModal')" style="margin-top:8px">＋ 管理支出分类</button>
+
+  <div class="section-title" style="margin-top:8px">收入分类</div>
+  <div class="asset-group" id="incCatGroup"></div>
+  <button class="add-account-btn" onclick="openModal('incCatModal')" style="margin-top:8px">＋ 管理收入分类</button>
+
+  <!-- Balance History -->
+  <div class="section-title" style="margin-top:8px">余额更新记录</div>
+  <div id="balanceHistoryList"></div>
+
 </div>
 </div><!-- end .content -->
 
@@ -1943,11 +1724,15 @@ body[data-page="assets"] .nav-btn.active {
       <div class="form-input" id="editAccName" style="cursor:default;color:var(--text2)"></div>
     </div>
     <div class="form-group">
-      <label class="form-label">当前余额</label>
+      <label class="form-label">新余额</label>
       <div class="amount-wrap">
         <span class="amount-symbol">$</span>
         <input class="form-input" type="number" id="editAccBal" inputmode="decimal">
       </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">备注（可选）</label>
+      <input class="form-input" type="text" id="editAccNote" placeholder="如：月底对账、工资到账">
     </div>
     <div class="modal-actions">
       <button class="modal-cancel" onclick="closeModal('editAccModal')">取消</button>
@@ -2032,6 +1817,30 @@ body[data-page="assets"] .nav-btn.active {
   </div>
 </div>
 
+
+<!-- Expense Category Modal -->
+<div class="modal-overlay" id="expCatModal">
+  <div class="modal">
+    <div class="modal-title">管理支出分类</div>
+    <div id="expCatModalList" style="margin-bottom:16px;max-height:200px;overflow-y:auto"></div>
+    <div class="form-row" style="margin-bottom:8px">
+      <div class="form-group">
+        <label class="form-label">新分类名称</label>
+        <input class="form-input" type="text" id="newExpCatName" placeholder="如：旅行">
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:4px">
+      <div class="form-group">
+        <label class="form-label">子分类（用逗号分隔）</label>
+        <input class="form-input" type="text" id="newExpCatSub" placeholder="如：机票,酒店,餐饮">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('expCatModal')">关闭</button>
+      <button class="modal-confirm" onclick="addExpCat()">添加</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -2067,19 +1876,36 @@ const DEFAULT_BUDGETS = [
 
 const DEFAULT_INC_CATS = ['工资','奖金','副业','礼金','报销','其他'];
 
+// Expense categories with optional subcategories
+const DEFAULT_EXP_CATS = [
+  {id:'groceries', label:'买菜', sub:[]},
+  {id:'dining', label:'餐饮', sub:['外卖','餐厅','咖啡']},
+  {id:'transport', label:'交通', sub:['地铁','打车','加油']},
+  {id:'shopping', label:'购物', sub:['衣服','日用品','电子']},
+  {id:'entertainment', label:'娱乐', sub:['游玩','电影','订阅']},
+  {id:'health', label:'医疗', sub:[]},
+  {id:'bills', label:'账单', sub:['房租','水电','网络']},
+  {id:'gift', label:'礼物', sub:[]},
+  {id:'other', label:'其他', sub:[]},
+];
+
 let data = {
   accounts: [],
   transactions: [],
   budgets: [],
   incCategories: [],
+  expCategories: [],
+  balanceHistory: [],
 };
 
 let ui = {
   currentExpType: 'expense',
   currentExpCat: 'groceries',
   currentIncCat: '',
+  reportPeriod: 'month',
   reportMonth: new Date().getMonth(),
   reportYear: new Date().getFullYear(),
+  reportWeekOffset: 0,
 };
 
 // ============================================================
@@ -2158,10 +1984,17 @@ async function load() {
     const incCatSetting = settings.find(s => s.key === 'inc_categories');
     data.incCategories = incCatSetting ? JSON.parse(incCatSetting.value) : [...DEFAULT_INC_CATS];
 
+    const expCatSetting = settings.find(s => s.key === 'exp_categories');
+    data.expCategories = expCatSetting ? JSON.parse(expCatSetting.value) : DEFAULT_EXP_CATS.map(c=>({...c,sub:[...c.sub]}));
+
+    const balHistSetting = settings.find(s => s.key === 'balance_history');
+    data.balanceHistory = balHistSetting ? JSON.parse(balHistSetting.value) : [];
+
     // If first time, push defaults to Supabase
     if (accs.length === 0) await supa.upsert('pp_accounts', data.accounts);
     if (budgets.length === 0) await supa.upsert('pp_budgets', data.budgets);
     if (!incCatSetting) await supa.upsert('pp_settings', [{key:'inc_categories', value: JSON.stringify(data.incCategories)}]);
+    if (!expCatSetting) await supa.upsert('pp_settings', [{key:'exp_categories', value: JSON.stringify(data.expCategories)}]);
 
   } catch(e) {
     // Fallback to localStorage
@@ -2176,6 +2009,8 @@ async function load() {
   }
 
   if (!data.incCategories || !data.incCategories.length) data.incCategories = [...DEFAULT_INC_CATS];
+  if (!data.expCategories || !data.expCategories.length) data.expCategories = DEFAULT_EXP_CATS.map(c=>({...c,sub:[...c.sub]}));
+  if (!data.balanceHistory) data.balanceHistory = [];
   if (!data.budgets || !data.budgets.length) data.budgets = DEFAULT_BUDGETS.map(b => ({...b}));
   ui.currentIncCat = data.incCategories[0] || '工资';
   hideLoading();
@@ -2190,6 +2025,8 @@ async function save() {
       supa.upsert('pp_accounts', data.accounts),
       supa.upsert('pp_budgets', data.budgets),
       supa.upsert('pp_settings', [{key:'inc_categories', value: JSON.stringify(data.incCategories)}]),
+      supa.upsert('pp_settings', [{key:'exp_categories', value: JSON.stringify(data.expCategories)}]),
+      supa.upsert('pp_settings', [{key:'balance_history', value: JSON.stringify(data.balanceHistory)}]),
     ]);
   } catch(e) { console.warn('Supabase save failed, localStorage backup used'); }
 }
@@ -2304,8 +2141,9 @@ function renderOverview() {
 function renderExpensePage() {
   // Categories
   const expWrap = document.getElementById('expCatWrap');
-  expWrap.innerHTML = EXP_CATEGORIES.map(c =>
-    `<div class="cat-pill ${ui.currentExpCat === c.id ? 'active' : ''}" onclick="setExpCat('${c.id}')">${c.emoji} ${c.label}</div>`
+  const allExpCats = [...EXP_CATEGORIES, ...(data.expCategories||[])];
+  expWrap.innerHTML = allExpCats.map(c =>
+    `<div class="cat-pill ${ui.currentExpCat === c.id ? 'active' : ''}" onclick="setExpCat('${c.id}')">${c.emoji ? c.emoji+' ' : ''}${c.label}</div>`
   ).join('');
 
   // Account selects
@@ -2361,13 +2199,34 @@ function renderAccountsPage() {
 }
 
 function renderReport() {
-  const y = ui.reportYear, m = ui.reportMonth;
-  document.getElementById('reportMonthLabel').textContent = `${y}年${m+1}月`;
+  const now = new Date();
+  let txs, labelText, startDate, endDate;
 
-  const txs = data.transactions.filter(t => {
-    const d = new Date(t.date);
-    return d.getFullYear() === y && d.getMonth() === m;
-  });
+  if (ui.reportPeriod === 'week') {
+    const offset = ui.reportWeekOffset || 0;
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay() + offset*7);
+    weekStart.setHours(0,0,0,0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23,59,59,999);
+    startDate = weekStart; endDate = weekEnd;
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    labelText = `${months[weekStart.getMonth()]} ${weekStart.getDate()} – ${months[weekEnd.getMonth()]} ${weekEnd.getDate()}`;
+    txs = data.transactions.filter(t => { const d=new Date(t.date); return d>=weekStart && d<=weekEnd; });
+  } else if (ui.reportPeriod === 'year') {
+    const y = ui.reportYear;
+    startDate = new Date(y,0,1); endDate = new Date(y,11,31,23,59,59);
+    labelText = `${y}年`;
+    txs = data.transactions.filter(t => new Date(t.date).getFullYear()===y);
+  } else {
+    const y = ui.reportYear, m = ui.reportMonth;
+    startDate = new Date(y,m,1); endDate = new Date(y,m+1,0,23,59,59);
+    labelText = `${y}年${m+1}月`;
+    txs = data.transactions.filter(t => { const d=new Date(t.date); return d.getFullYear()===y && d.getMonth()===m; });
+  }
+
+  document.getElementById('reportMonthLabel').textContent = labelText;
 
   let inc = 0, exp = 0;
   const expByCat = {}, incByCat = {};
@@ -2394,11 +2253,12 @@ function renderReport() {
   const expSorted = Object.entries(expByCat).sort((a,b) => b[1]-a[1]);
   const expEl = document.getElementById('rptExpCats');
   expEl.innerHTML = expSorted.length ? expSorted.map(([catId, amt]) => {
-    const cat = EXP_CATEGORIES.find(c => c.id === catId) || {emoji:'📦', label: catId};
+    const allCats = [...EXP_CATEGORIES, ...(data.expCategories||[])];
+    const cat = allCats.find(c => c.id === catId) || {label: catId};
     const pct = (amt / maxExp * 100).toFixed(1);
     return `<div class="cat-report-item">
       <div class="cat-report-header">
-        <div class="cat-report-label">${cat.emoji} ${cat.label}</div>
+        <div class="cat-report-label">${cat.label}</div>
         <div class="cat-report-amount">$${amt.toFixed(2)}</div>
       </div>
       <div class="cat-report-bar"><div class="cat-report-fill" style="width:${pct}%"></div></div>
@@ -2473,7 +2333,7 @@ function goTo(page) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('section-'+page).classList.add('active');
   document.body.setAttribute('data-page', page);
-  const pages = ['overview','expense','income','accounts','assets','calendar','report'];
+  const pages = ['overview','expense','income','assets','calendar','report'];
   document.querySelectorAll('.nav-btn')[pages.indexOf(page)]?.classList.add('active');
 
   if (page === 'expense') {
@@ -2486,8 +2346,7 @@ function goTo(page) {
     document.getElementById('incDate').value = today();
     renderIncomePage();
   }
-  if (page === 'accounts') renderAccountsPage();
-  if (page === 'report') renderReport();
+  if (page === 'report') { setReportPeriod(ui.reportPeriod); renderReport(); }
   if (page === 'overview') renderOverview();
   if (page === 'calendar') renderCalendarPage();
   if (page === 'assets') renderAssets();
@@ -2648,6 +2507,9 @@ function deleteTx(id) {
 
 function getBudgetIdForCat(catId) {
   if (catId === 'groceries') return 'family_groceries';
+  const allCats = [...EXP_CATEGORIES, ...(data.expCategories||[])];
+  const cat = allCats.find(c=>c.id===catId);
+  if (cat && cat.label.includes('买菜')) return 'family_groceries';
   return 'personal';
 }
 
@@ -2665,10 +2527,22 @@ function saveAccBalance() {
   const id = document.getElementById('editAccId').value;
   const acc = data.accounts.find(a=>a.id===id);
   if (!acc) return;
-  acc.balance = parseFloat(document.getElementById('editAccBal').value) || 0;
+  const oldBal = parseFloat(acc.balance);
+  const newBal = parseFloat(document.getElementById('editAccBal').value) || 0;
+  acc.balance = newBal;
+  // Record balance history
+  data.balanceHistory.push({
+    id: uid(),
+    account_id: id,
+    account_name: acc.name,
+    old_balance: oldBal,
+    new_balance: newBal,
+    date: new Date().toISOString(),
+    note: document.getElementById('editAccNote') ? document.getElementById('editAccNote').value.trim() : '',
+  });
   save();
   closeModal('editAccModal');
-  renderAccountsPage();
+  renderAssets();
   renderOverview();
   showToast('余额已更新');
 }
@@ -2767,12 +2641,20 @@ function deleteIncCat(name) {
 }
 
 // REPORT
-function changeReportMonth(delta) {
-  ui.reportMonth += delta;
-  if (ui.reportMonth < 0) { ui.reportMonth = 11; ui.reportYear--; }
-  if (ui.reportMonth > 11) { ui.reportMonth = 0; ui.reportYear++; }
+function changeReportPeriod(delta) {
+  if (ui.reportPeriod === 'week') {
+    ui.reportWeekOffset = (ui.reportWeekOffset||0) + delta;
+  } else if (ui.reportPeriod === 'month') {
+    ui.reportMonth += delta;
+    if (ui.reportMonth < 0) { ui.reportMonth = 11; ui.reportYear--; }
+    if (ui.reportMonth > 11) { ui.reportMonth = 0; ui.reportYear++; }
+  } else {
+    ui.reportYear += delta;
+  }
   renderReport();
 }
+
+function changeReportMonth(delta) { changeReportPeriod(delta); }
 
 // ============================================================
 // MODALS
@@ -2780,6 +2662,7 @@ function changeReportMonth(delta) {
 function openModal(id) {
   if (id === 'editBudgetModal') { openBudgetModal(); return; }
   if (id === 'incCatModal') { openIncCatModal(); return; }
+  if (id === 'expCatModal') { renderExpCatModalList(); document.getElementById(id).classList.add('open'); return; }
   document.getElementById(id).classList.add('open');
 }
 
@@ -2917,6 +2800,85 @@ function renderAssets() {
   `;
 }
 
+  // Budget group
+  const budgetGroup = document.getElementById('assetBudgetGroup');
+  if (budgetGroup) {
+    budgetGroup.innerHTML = data.budgets.map(b => {
+      const weekStart = getWeekStart();
+      const spent = data.transactions
+        .filter(t => t.type==='expense' && t.budget_id===b.id && new Date(t.date)>=weekStart)
+        .reduce((s,t)=>s+parseFloat(t.amount),0);
+      const pct = Math.min(spent/b.amount,1);
+      const barW = pct*100;
+      const barCol = pct<0.7?'#7ec8a0':pct<1?'#E6BE5A':'#D25064';
+      return `<div class="asset-row">
+        <div class="asset-row-left">
+          <div class="asset-row-name">${b.name}</div>
+          <div class="asset-row-type">每周 $${b.amount} · 已用 $${spent.toFixed(0)}</div>
+          <div style="margin-top:5px;height:3px;background:rgba(140,120,180,0.1);border-radius:2px;width:140px">
+            <div style="height:3px;border-radius:2px;background:${barCol};width:${barW}%"></div>
+          </div>
+        </div>
+        <div style="font-family:'EB Garamond',serif;font-size:16px;color:${pct>=1?'#D25064':'var(--text)'}">$${(b.amount-spent).toFixed(0)}</div>
+      </div>`;
+    }).join('') || '<div style="padding:14px;color:var(--text3);font-size:13px;text-align:center">还没有预算</div>';
+  }
+
+  // Expense categories
+  const expCatGroup = document.getElementById('expCatGroup');
+  if (expCatGroup) {
+    expCatGroup.innerHTML = (data.expCategories||[]).map(c => `
+      <div class="asset-row">
+        <div class="asset-row-left">
+          <div class="asset-row-name">${c.label}</div>
+          ${c.sub && c.sub.length ? `<div class="asset-row-type">${c.sub.join(' · ')}</div>` : ''}
+        </div>
+        <button onclick="deleteExpCat('${c.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:4px">×</button>
+      </div>
+    `).join('');
+  }
+
+  // Income categories
+  const incCatGroup = document.getElementById('incCatGroup');
+  if (incCatGroup) {
+    incCatGroup.innerHTML = (data.incCategories||[]).map(c => `
+      <div class="asset-row">
+        <div class="asset-row-left">
+          <div class="asset-row-name">${c}</div>
+        </div>
+        <button onclick="deleteIncCat('${c}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:4px">×</button>
+      </div>
+    `).join('');
+  }
+
+  // Balance history
+  const histEl = document.getElementById('balanceHistoryList');
+  if (histEl) {
+    const hist = [...(data.balanceHistory||[])].reverse().slice(0,20);
+    if (hist.length === 0) {
+      histEl.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px;font-style:italic">还没有余额更新记录</div>';
+    } else {
+      histEl.innerHTML = hist.map(h => {
+        const d = new Date(h.date);
+        const dateStr = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        const diff = parseFloat(h.new_balance) - parseFloat(h.old_balance);
+        const diffStr = (diff>=0?'+':'') + '$' + Math.abs(diff).toFixed(2);
+        const diffCol = diff>0?'#7ec8a0':diff<0?'#D25064':'var(--text3)';
+        return `<div class="bal-history-item">
+          <div class="bal-history-left">
+            <div class="bal-history-acc">${h.account_name}</div>
+            <div class="bal-history-date">${dateStr}${h.note ? ' · ' + h.note : ''}</div>
+          </div>
+          <div class="bal-history-right">
+            <div class="bal-history-new">$${Math.abs(parseFloat(h.new_balance)).toFixed(2)}</div>
+            <div class="bal-history-old" style="color:${diffCol}">${diffStr}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
 function addNewAccount() {
   const name = document.getElementById('newAccName2').value.trim();
   if (!name) { showToast('请输入账户名称'); return; }
@@ -2928,9 +2890,47 @@ function addNewAccount() {
   document.getElementById('newAccName2').value = '';
   document.getElementById('newAccBal2').value = '';
   renderAssets();
-  renderAccountsPage();
   renderOverview();
   showToast('账户已添加');
+}
+
+function addExpCat() {
+  const name = document.getElementById('newExpCatName').value.trim();
+  if (!name) { showToast('请输入分类名称'); return; }
+  const subRaw = document.getElementById('newExpCatSub').value.trim();
+  const sub = subRaw ? subRaw.split(/[,，]/).map(s=>s.trim()).filter(Boolean) : [];
+  const id = name.toLowerCase().replace(/\s+/g,'_') + '_' + Date.now().toString(36);
+  if (!data.expCategories) data.expCategories = [];
+  data.expCategories.push({ id, label: name, sub });
+  save();
+  document.getElementById('newExpCatName').value = '';
+  document.getElementById('newExpCatSub').value = '';
+  renderExpCatModalList();
+  renderAssets();
+  renderExpensePage();
+  showToast('分类已添加');
+}
+
+function deleteExpCat(id) {
+  data.expCategories = (data.expCategories||[]).filter(c=>c.id!==id);
+  save();
+  renderAssets();
+  renderExpensePage();
+  showToast('已删除');
+}
+
+function renderExpCatModalList() {
+  const el = document.getElementById('expCatModalList');
+  if (!el) return;
+  el.innerHTML = (data.expCategories||[]).map(c => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:14px;color:var(--text)">${c.label}</div>
+        ${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}
+      </div>
+      <button onclick="deleteExpCat('${c.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
+    </div>
+  `).join('') || '<div style="color:var(--text3);font-size:13px;padding:8px">还没有自定义分类</div>';
 }
 
 // ============================================================
