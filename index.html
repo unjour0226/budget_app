@@ -2925,12 +2925,15 @@ function setExpCat(catId) {
   const override=(data.expCatOverrides||{})[catId];
   const subs=override!==undefined?override:(cat&&cat.sub?cat.sub:[]);
   if(subs.length===0){subWrap.style.display='none';subPills.innerHTML='';}
-  else{subWrap.style.display='block';subPills.innerHTML=subs.map(s=>`<div class="cat-pill" onclick="setExpSubCat(${JSON.stringify(s)})">${s}</div>`).join('');}
+  else{subWrap.style.display='block';subPills.innerHTML=subs.map(s=>`<div class="cat-pill" onclick="setExpSubCat(this)" data-sub="${s.replace(/"/g,'&quot;')}">${s}</div>`).join('');}
 }
 
-function setExpSubCat(sub) {
+function setExpSubCat(el) {
+  const sub = typeof el === 'string' ? el : el.dataset.sub;
   ui.currentExpSubCat=sub;
-  document.querySelectorAll('#expSubCatPills .cat-pill').forEach(p=>p.classList.toggle('active',p.textContent.trim()===sub));
+  document.querySelectorAll('#expSubCatPills .cat-pill').forEach(p=>p.classList.remove('active'));
+  if(typeof el !== 'string') el.classList.add('active');
+  else document.querySelectorAll('#expSubCatPills .cat-pill').forEach(p=>{if(p.dataset.sub===sub)p.classList.add('active');});
   const noteEl=document.getElementById('expNote'); if(noteEl&&!noteEl.value)noteEl.value=sub;
 }
 
