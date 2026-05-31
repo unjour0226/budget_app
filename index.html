@@ -2095,809 +2095,7 @@ body[data-page="report"] .stats-summary-value.exp { color: #f0a0b0; }
 
 </div>
 
-<!-- ===== REPORT ===== -->
-<div class="section" id="section-report">
 
-  <!-- Period Toggle -->
-  <div class="stats-period-row">
-    <button class="stats-period-btn active" id="spWeek" onclick="setReportPeriod('week')">周</button>
-    <button class="stats-period-btn" id="spMonth" onclick="setReportPeriod('month')">月</button>
-    <button class="stats-period-btn" id="spYear" onclick="setReportPeriod('year')">年</button>
-  </div>
-
-  <!-- Period Nav -->
-  <div class="stats-nav-row">
-    <button class="stats-nav-btn" onclick="changeReportPeriod(-1)">◀</button>
-    <div class="stats-nav-label" id="statsNavLabel">2026年5月</div>
-    <button class="stats-nav-btn" onclick="changeReportPeriod(1)">▶</button>
-  </div>
-
-  <!-- Donut Chart -->
-  <div class="donut-card">
-    <div class="donut-wrap">
-      <svg id="donutSvg" viewBox="0 0 200 200" width="180" height="180">
-        <circle cx="100" cy="100" r="70" fill="none" stroke="rgba(140,120,180,0.1)" stroke-width="32"/>
-        <g id="donutArcs"></g>
-      </svg>
-      <div class="donut-center">
-        <div class="donut-center-label" id="donutLabel">总支出</div>
-        <div class="donut-center-amount" id="donutAmount">$0</div>
-      </div>
-    </div>
-  </div>
-  <!-- Color Legend -->
-  <div id="donutLegend" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px;padding:0 8px"></div>
-
-  <!-- Expense / Income toggle -->
-  <div class="stats-type-row">
-    <button class="stats-type-btn active" id="stExp" onclick="setStatsType('expense')">支出</button>
-    <button class="stats-type-btn" id="stInc" onclick="setStatsType('income')">收入</button>
-  </div>
-
-  <!-- Category breakdown -->
-  <div id="statsCatList"></div>
-
-  <!-- Summary -->
-  <div class="stats-summary-row">
-    <div class="stats-summary-card">
-      <div class="stats-summary-label">总收入</div>
-      <div class="stats-summary-value inc" id="statsTotalInc">$0</div>
-    </div>
-    <div class="stats-summary-card">
-      <div class="stats-summary-label">总支出</div>
-      <div class="stats-summary-value exp" id="statsTotalExp">$0</div>
-    </div>
-    <div class="stats-summary-card">
-      <div class="stats-summary-label">结余</div>
-      <div class="stats-summary-value" id="statsTotalNet">$0</div>
-    </div>
-  </div>
-
-  <div class="petit-quote">"所有的大人曾经都是小孩，虽然只有少数人记得这一点。"</div>
-</div>
-
-</div><!-- end .content --function setReportPeriod(period) {
-  ui.reportPeriod = period;
-  ui.reportPeriodOffset = 0;
-  ['week','month','year'].forEach(function(p) {
-    var btn = document.getElementById('sp'+p.charAt(0).toUpperCase()+p.slice(1));
-    if (btn) btn.classList.toggle('active', p===period);
-  });
-  renderReport();
-}
-
-function setStatsType(type) {
-  ui.statsType = type;
-  var expBtn = document.getElementById('stExp');
-  var incBtn = document.getElementById('stInc');
-  if (expBtn) expBtn.className = 'stats-type-btn' + (type==='expense'?' active exp-active':'');
-  if (incBtn) incBtn.className = 'stats-type-btn' + (type==='income'?' active inc-active':'');
-  renderReport();
-}
-
-function changeReportPeriod(delta) {
-  if (ui.reportPeriod === 'week') {
-    ui.reportWeekOffset = (ui.reportWeekOffset||0) + delta;
-  } else if (ui.reportPeriod === 'month') {
-    ui.reportMonth += delta;
-    if (ui.reportMonth < 0) { ui.reportMonth = 11; ui.reportYear--; }
-    if (ui.reportMonth > 11) { ui.reportMonth = 0; ui.reportYear++; }
-  } else {
-    ui.reportYear += delta;
-  }
-  renderReport();
-}
-
-function changeReportMonth(delta) { changeReportPeriod(delta); }
-
-// ============================================================
-// MODALS
-// ============================================================
-function openModal(id) {
-  if (id === 'editBudgetModal') { openBudgetModal(); return; }
-  if (id === 'incCatModal') { renderIncCatList(); document.getElementById('incCatModal').classList.add('open'); return; }
-  if (id === 'expCatModal') { renderExpCatModalList(); document.getElementById(id).classList.add('open'); return; }
-  document.getElementById(id).classList.add('open');
-}
-
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
-
-document.querySelectorAll('.modal-overlay').forEach(el => {
-  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
-});
-
-// ============================================================
-// UTILS
-// ============================================================
-function today() { return new Date().toISOString().slice(0,10); }
-
-function getWeekStart() {
-  const now = new Date();
-  const d = new Date(now);
-  d.setDate(now.getDate() - now.getDay());
-  d.setHours(0,0,0,0);
-  return d;
-}
-
-function formatDate(s) {
-  const d = new Date(s);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const diff = Math.round((today - target) / 86400000);
-  if (diff === 0) return '今天';
-  if (diff === 1) return '昨天';
-  if (diff === 2) return '前天';
-  return `${d.getMonth()+1}月${d.getDate()}日`;
-}
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2000);
-}
-
-// ============================================================
-// STARS
-// ============================================================
-function initStars() {
-  const bg = document.getElementById('starsBg');
-  for (let i = 0; i < 80; i++) {
-    const s = document.createElement('div');
-    s.className = 'star-dot';
-    const size = Math.random() * 2 + 0.5;
-    s.style.cssText = `
-      width:${size}px; height:${size}px;
-      left:${Math.random()*100}%;
-      top:${Math.random()*100}%;
-      --dur:${2+Math.random()*4}s;
-      --delay:${Math.random()*4}s;
-      --min-op:${0.08+Math.random()*0.12};
-      --max-op:${0.25+Math.random()*0.35};
-    `;
-    bg.appendChild(s);
-  }
-}
-
-
-
-// ============================================================
-// ASSETS PAGE
-// ============================================================
-function renderAssets() {
-  const accounts = data.accounts;
-
-  // Separate cash/debit/savings vs credit
-  const cashAccs = accounts.filter(a => a.type !== 'credit');
-  const creditAccs = accounts.filter(a => a.type === 'credit');
-
-  const totalAssets = cashAccs.filter(a=>a.include_in_net!==false).reduce((s,a) => s + Math.max(parseFloat(a.balance), 0), 0);
-  const totalDebts  = creditAccs.filter(a=>a.include_in_net!==false).reduce((s,a) => s + Math.abs(Math.min(parseFloat(a.balance), 0)), 0);
-  const netWorth    = totalAssets - totalDebts;
-
-  // Net worth card
-  const nwEl = document.getElementById('netWorthAmount');
-  nwEl.textContent = `${netWorth < 0 ? '-' : ''}$${Math.abs(netWorth).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-  nwEl.className = `net-worth-amount ${netWorth >= 0 ? 'positive' : 'negative'}`;
-  document.getElementById('totalAssets').textContent = `$${totalAssets.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-  document.getElementById('totalDebts').textContent  = `$${totalDebts.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-
-  // Cash/Debit group
-  const cashGroup = document.getElementById('assetGroupCash');
-  const cashTotal = cashAccs.reduce((s,a) => s + parseFloat(a.balance), 0);
-  cashGroup.innerHTML = `
-    <div class="asset-group-header">
-      <div class="asset-group-name">现金 · 储蓄</div>
-      <div class="asset-group-total ${cashTotal>=0?'pos':'neg'}">$${Math.abs(cashTotal).toFixed(2)}</div>
-    </div>
-    ${cashAccs.map(a => {
-      const b = parseFloat(a.balance);
-      const cls = b > 0 ? 'pos' : (b < 0 ? 'neg' : 'zero');
-      const typeLabel = {cash:'现金', debit:'储蓄卡', savings:'储蓄账户', digital:'数字钱包'}[a.type] || a.type;
-      const inNet2 = a.include_in_net !== false;
-      return `<div class="asset-row" onclick="openEditAcc('${a.id}')">
-        <div class="asset-row-left">
-          <div class="asset-row-name">${a.name}${!inNet2 ? ' <span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:1px 5px;border-radius:4px">不计入</span>' : ''}</div>
-          <div class="asset-row-type">${typeLabel}</div>
-        </div>
-        <div class="asset-row-balance ${cls}">$${b < 0 ? '-' : ''}${Math.abs(b).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
-      </div>`;
-    }).join('')}
-  `;
-
-  // Credit group
-  const creditGroup = document.getElementById('assetGroupCredit');
-  if (creditAccs.length === 0) {
-    creditGroup.style.display = 'none';
-    return;
-  }
-  creditGroup.style.display = '';
-  const creditOwedTotal = creditAccs.filter(a=>a.include_in_net!==false).reduce((s,a) => s + Math.abs(Math.min(parseFloat(a.balance),0)), 0);
-  creditGroup.innerHTML = `
-    <div class="asset-group-header">
-      <div class="asset-group-name">信用卡 (${creditAccs.length})</div>
-      <div style="text-align:right">
-        <div class="asset-group-total neg">欠款: $${creditOwedTotal.toFixed(2)}</div>
-      </div>
-    </div>
-    ${creditAccs.map(a => {
-      const b = parseFloat(a.balance);
-      const cls = b > 0 ? 'pos' : (b < 0 ? 'neg' : 'zero');
-      const owed = Math.abs(Math.min(b, 0));
-      const limit = parseFloat(a.credit_limit) || 0;
-      const avail = limit > 0 ? Math.max(limit - owed, 0) : null;
-      const inNet = a.include_in_net !== false;
-      const usedPct = limit > 0 ? Math.min(owed/limit*100, 100) : 0;
-      const barCol = usedPct < 50 ? '#7ec8a0' : usedPct < 80 ? '#E6BE5A' : '#D25064';
-      return `<div class="asset-row" style="flex-direction:column;align-items:stretch;gap:8px" onclick="openEditAcc('${a.id}')">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div>
-            <div class="asset-row-name">${a.name}${!inNet ? ' <span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:1px 5px;border-radius:4px">不计入</span>' : ''}</div>
-            <div class="asset-row-type">信用卡</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0">
-            <div style="font-family:'EB Garamond',serif;font-size:18px;color:#D25064">-$${owed.toFixed(2)}</div>
-            ${limit > 0 ? `<div style="font-size:11px;color:#3a7850;margin-top:1px">可用额度: $${avail.toFixed(2)}</div>` : '<div style="font-size:11px;color:var(--text3);margin-top:1px">点击设置额度</div>'}
-          </div>
-        </div>
-        ${limit > 0 ? `<div>
-          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px">
-            <span>已用 $${owed.toFixed(2)} / 总额度 $${limit.toFixed(0)}</span>
-            <span>${usedPct.toFixed(0)}%</span>
-          </div>
-          <div style="height:4px;background:rgba(140,120,180,0.1);border-radius:2px;overflow:hidden">
-            <div style="height:4px;border-radius:2px;background:${barCol};width:${usedPct}%;transition:width 0.4s"></div>
-          </div>
-        </div>` : ''}
-      </div>`;
-    }).join('')}
-  `;
-
-  // Budget group
-  const budgetGroup = document.getElementById('assetBudgetGroup');
-  if (budgetGroup) {
-    budgetGroup.innerHTML = data.budgets.map(b => {
-      const weekStart = getWeekStart();
-      const spent = data.transactions
-        .filter(t => t.type==='expense' && t.budget_id===b.id && new Date(t.date)>=weekStart)
-        .reduce((s,t)=>s+parseFloat(t.amount),0);
-      const pct = Math.min(spent/b.amount,1);
-      const barW = pct*100;
-      const barCol = pct<0.7?'#7ec8a0':pct<1?'#E6BE5A':'#D25064';
-      return `<div class="asset-row">
-        <div class="asset-row-left">
-          <div class="asset-row-name">${b.name}</div>
-          <div class="asset-row-type">每周 $${b.amount} · 已用 $${spent.toFixed(0)}</div>
-          <div style="margin-top:5px;height:3px;background:rgba(140,120,180,0.1);border-radius:2px;width:140px">
-            <div style="height:3px;border-radius:2px;background:${barCol};width:${barW}%"></div>
-          </div>
-        </div>
-        <div style="font-family:'EB Garamond',serif;font-size:16px;color:${pct>=1?'#D25064':'var(--text)'}">$${(b.amount-spent).toFixed(0)}</div>
-      </div>`;
-    }).join('') || '<div style="padding:14px;color:var(--text3);font-size:13px;text-align:center">还没有预算</div>';
-  }
-
-  // Expense categories
-  const expCatGroup = document.getElementById('expCatGroup');
-  if (expCatGroup) {
-    expCatGroup.innerHTML = (data.expCategories||[]).map(c => `
-      <div class="asset-row">
-        <div class="asset-row-left">
-          <div class="asset-row-name">${c.label}</div>
-          ${c.sub && c.sub.length ? `<div class="asset-row-type">${c.sub.join(' · ')}</div>` : ''}
-        </div>
-        <button onclick="deleteExpCat('${c.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:4px">×</button>
-      </div>
-    `).join('');
-  }
-
-  // Income categories
-  const incCatGroup = document.getElementById('incCatGroup');
-  if (incCatGroup) {
-    incCatGroup.innerHTML = (data.incCategories||[]).map(c => `
-      <div class="asset-row">
-        <div class="asset-row-left">
-          <div class="asset-row-name">${c}</div>
-        </div>
-        <button onclick="deleteIncCat('${c}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:4px">×</button>
-      </div>
-    `).join('');
-  }
-
-  // Balance history
-  const histEl = document.getElementById('balanceHistoryList');
-  if (histEl) {
-    const hist = [...(data.balanceHistory||[])].reverse().slice(0,20);
-    if (hist.length === 0) {
-      histEl.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px;font-style:italic">还没有余额更新记录</div>';
-    } else {
-      histEl.innerHTML = hist.map(h => {
-        const d = new Date(h.date);
-        const dateStr = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-        const diff = parseFloat(h.new_balance) - parseFloat(h.old_balance);
-        const diffStr = (diff>=0?'+':'') + '$' + Math.abs(diff).toFixed(2);
-        const diffCol = diff>0?'#7ec8a0':diff<0?'#D25064':'var(--text3)';
-        return `<div class="bal-history-item">
-          <div class="bal-history-left">
-            <div class="bal-history-acc">${h.account_name}</div>
-            <div class="bal-history-date">${dateStr}${h.note ? ' · ' + h.note : ''}</div>
-          </div>
-          <div class="bal-history-right">
-            <div class="bal-history-new">$${Math.abs(parseFloat(h.new_balance)).toFixed(2)}</div>
-            <div class="bal-history-old" style="color:${diffCol}">${diffStr}</div>
-          </div>
-        </div>`;
-      }).join('');
-    }
-  }
-}
-
-function addNewAccount() {
-  const name = document.getElementById('newAccName2').value.trim();
-  if (!name) { showToast('请输入账户名称'); return; }
-  const type = document.getElementById('newAccType2').value;
-  let bal = parseFloat(document.getElementById('newAccBal2').value) || 0;
-  const limit = parseFloat(document.getElementById('newAccLimit')?.value) || 0;
-  if (type === 'credit') bal = -Math.abs(bal);
-  data.accounts.push({ id: uid(), name, type, balance: bal, credit_limit: limit });
-  save();
-  closeModal('newAccountModal');
-  document.getElementById('newAccName2').value = '';
-  document.getElementById('newAccBal2').value = '';
-  renderAssets();
-  renderOverview();
-  showToast('账户已添加');
-}
-
-function addExpCat() {
-  const name = document.getElementById('newExpCatName').value.trim();
-  if (!name) { showToast('请输入分类名称'); return; }
-  const subRaw = document.getElementById('newExpCatSub').value.trim();
-  const sub = subRaw ? subRaw.split(/[,，]/).map(s=>s.trim()).filter(Boolean) : [];
-  const id = name.toLowerCase().replace(/\s+/g,'_') + '_' + Date.now().toString(36);
-  if (!data.expCategories) data.expCategories = [];
-  data.expCategories.push({ id, label: name, sub });
-  save();
-  document.getElementById('newExpCatName').value = '';
-  document.getElementById('newExpCatSub').value = '';
-  renderExpCatModalList();
-  renderAssets();
-  renderExpensePage();
-  showToast('分类已添加');
-}
-
-function deleteExpCat(id) {
-  data.expCategories = (data.expCategories||[]).filter(c=>c.id!==id);
-  save();
-  renderAssets();
-  renderExpensePage();
-  showToast('已删除');
-}
-
-function renderExpCatModalList() {
-  const el = document.getElementById('expCatModalList');
-  if (!el) return;
-
-  // Built-in cats - show with editable sub
-  const builtInHtml = EXP_CATEGORIES.map(c => {
-    // Check if user has overridden sub for this built-in
-    const override = (data.expCatOverrides||{})[c.id];
-    const subs = override !== undefined ? override : (c.sub||[]);
-    const stickerSrc = (data.catStickers||{})[c.id];
-    return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:8px">
-          <div onclick="openStickerPicker('${c.id}', renderExpCatModalList)" style="width:40px;height:40px;border-radius:10px;border:1px dashed rgba(140,120,180,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0" title="点击选择贴纸">
-            ${stickerSrc ? `<img src="${stickerSrc}" style="width:36px;height:36px;object-fit:contain">` : '<span style="font-size:18px;color:var(--text3)">+</span>'}
-          </div>
-          <div style="font-size:14px;color:var(--text);font-weight:500">${c.label}</div>
-        </div>
-        <span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:2px 6px;border-radius:4px">内置</span>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">
-        ${subs.map(s => `<span style="background:rgba(140,120,180,0.1);border:1px solid rgba(140,120,180,0.2);border-radius:12px;padding:3px 10px;font-size:12px;color:var(--text2);display:inline-flex;align-items:center;gap:4px">
-          ${s}
-          <button onclick="removeBuiltInSub('${c.id}','${s}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0;line-height:1">×</button>
-        </span>`).join('')}
-        <button onclick="addBuiltInSub('${c.id}')" style="background:rgba(140,120,180,0.08);border:1px dashed rgba(140,120,180,0.3);border-radius:12px;padding:3px 10px;font-size:12px;color:#8C78B4;cursor:pointer">+ 添加</button>
-      </div>
-    </div>`;
-  }).join('');
-
-  // Custom (deletable)
-  const customHtml = (data.expCategories||[]).length > 0 ?
-    '<div style="font-size:11px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;padding:10px 0 6px">自定义分类</div>' +
-    (data.expCategories||[]).map(c => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="display:flex;align-items:center;gap:8px">
-          <div onclick="openStickerPicker('${c.id}', renderExpCatModalList)" style="width:40px;height:40px;border-radius:10px;border:1px dashed rgba(140,120,180,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
-            ${(data.catStickers||{})[c.id] ? `<img src="${(data.catStickers||{})[c.id]}" style="width:36px;height:36px;object-fit:contain">` : '<span style="font-size:18px;color:var(--text3)">+</span>'}
-          </div>
-          <div>
-            <div style="font-size:14px;color:var(--text)">${c.label}</div>
-            ${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}
-          </div>
-        </div>
-        <button onclick="deleteExpCat('${c.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
-      </div>
-    `).join('') : '';
-
-  el.innerHTML = builtInHtml + customHtml;
-}
-
-function addBuiltInSub(catId) {
-  const sub = prompt('添加子分类：');
-  if (!sub || !sub.trim()) return;
-  if (!data.expCatOverrides) data.expCatOverrides = {};
-  const cat = EXP_CATEGORIES.find(c=>c.id===catId);
-  const current = data.expCatOverrides[catId] !== undefined ? data.expCatOverrides[catId] : (cat?.sub||[]);
-  if (!current.includes(sub.trim())) {
-    data.expCatOverrides[catId] = [...current, sub.trim()];
-    save();
-  }
-  renderExpCatModalList();
-}
-
-function removeBuiltInSub(catId, sub) {
-  if (!data.expCatOverrides) data.expCatOverrides = {};
-  const cat = EXP_CATEGORIES.find(c=>c.id===catId);
-  const current = data.expCatOverrides[catId] !== undefined ? data.expCatOverrides[catId] : (cat?.sub||[]);
-  data.expCatOverrides[catId] = current.filter(s=>s!==sub);
-  save();
-  renderExpCatModalList();
-}
-
-// ============================================================
-// CALENDAR
-// ============================================================
-let calState = {
-  month: new Date().getMonth(),
-  year: new Date().getFullYear(),
-  selectedDate: null,
-};
-
-function renderCalendarPage() {
-  renderDailyBudget();
-  renderPiggyBank();
-  renderCalendar();
-}
-
-function renderDailyBudget() {
-  const el = document.getElementById('dailyBudgetRow');
-  const todayStr = today();
-  const weekStart = getWeekStart();
-
-  el.innerHTML = data.budgets.map(b => {
-    const weekSpent = data.transactions
-      .filter(t => t.type === 'expense' && t.budget_id === b.id && new Date(t.date) >= weekStart)
-      .reduce((s,t) => s + t.amount, 0);
-
-    const dayOfWeek = new Date().getDay(); // 0=Sun
-    const daysElapsed = dayOfWeek === 0 ? 0 : dayOfWeek;
-    const daysLeft = 7 - daysElapsed;
-    const budgetUsedSoFar = b.amount * (daysElapsed / 7);
-    const dailyBudget = b.amount / 7;
-
-    const todaySpent = data.transactions
-      .filter(t => t.type === 'expense' && t.budget_id === b.id && t.date.slice(0,10) === todayStr)
-      .reduce((s,t) => s + t.amount, 0);
-
-    const remaining = dailyBudget - todaySpent;
-    const cls = remaining > dailyBudget * 0.5 ? 'good' : (remaining > 0 ? 'warn' : 'over');
-
-    return `<div class="daily-stat">
-      <div class="daily-stat-label">${b.name}</div>
-      <div class="daily-stat-value ${cls}">$${Math.abs(remaining).toFixed(0)}${remaining < 0 ? '↑' : ''}</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:2px">今日可用 $${dailyBudget.toFixed(0)}</div>
-    </div>`;
-  }).join('') || '<div style="color:var(--text3);font-size:13px">还没有设置预算</div>';
-}
-
-function getWeekRanges() {
-  // Returns all completed week ranges (Sun–Sat) from year start to last week
-  const now = new Date();
-  const weeks = [];
-  let cursor = new Date(now.getFullYear(), 0, 1);
-  cursor.setDate(cursor.getDate() - cursor.getDay()); // align to Sunday
-
-  while (cursor <= now) {
-    const wStart = new Date(cursor);
-    const wEnd = new Date(cursor);
-    wEnd.setDate(wEnd.getDate() + 6);
-    wEnd.setHours(23,59,59,999);
-    const isCurrentWeek = wStart <= now && wEnd >= now;
-    if (!isCurrentWeek) weeks.push({ wStart, wEnd });
-    cursor.setDate(cursor.getDate() + 7);
-  }
-  return weeks;
-}
-
-function getBudgetById(id) {
-  return data.budgets.find(b => b.id === id);
-}
-
-function weekSpentForBudget(budgetId, wStart, wEnd) {
-  return data.transactions
-    .filter(t => t.type === 'expense' && t.budget_id === budgetId)
-    .filter(t => { const d = new Date(t.date); return d >= wStart && d <= wEnd; })
-    .reduce((s,t) => s + t.amount, 0);
-}
-
-function renderPiggyBank() {
-  const weeks = getWeekRanges();
-
-  // Find the two main budget IDs
-  const groceryBudget = data.budgets.find(b => b.id === 'family_groceries') || data.budgets.find(b => b.name.includes('买菜'));
-  const personalBudget = data.budgets.find(b => b.id === 'personal') || data.budgets.find(b => b.name.includes('个人'));
-
-  // Per-budget weekly savings
-  let groceryTotal = 0, personalTotal = 0;
-  const weekRows = weeks.map(({wStart, wEnd}) => {
-    const label = `${wStart.getMonth()+1}/${wStart.getDate()} – ${wEnd.getMonth()+1}/${wEnd.getDate()}`;
-    let grocerySaved = 0, personalSaved = 0, otherSaved = 0;
-
-    if (groceryBudget) {
-      const spent = weekSpentForBudget(groceryBudget.id, wStart, wEnd);
-      // Only count as saved if we actually spent something OR it's a non-zero week
-      const hasActivity = data.transactions.some(t => {
-        const d = new Date(t.date); return d >= wStart && d <= wEnd;
-      });
-      if (hasActivity) grocerySaved = groceryBudget.amount - spent;
-    }
-    if (personalBudget) {
-      const spent = weekSpentForBudget(personalBudget.id, wStart, wEnd);
-      const hasActivity = data.transactions.some(t => {
-        const d = new Date(t.date); return d >= wStart && d <= wEnd;
-      });
-      if (hasActivity) personalSaved = personalBudget.amount - spent;
-    }
-    // Other budgets
-    data.budgets.forEach(b => {
-      if (b.id !== groceryBudget?.id && b.id !== personalBudget?.id) {
-        const spent = weekSpentForBudget(b.id, wStart, wEnd);
-        const hasActivity = data.transactions.some(t => {
-          const d = new Date(t.date); return d >= wStart && d <= wEnd;
-        });
-        if (hasActivity) otherSaved += b.amount - spent;
-      }
-    });
-
-    if (groceryBudget) groceryTotal += Math.max(grocerySaved, 0);
-    if (personalBudget) personalTotal += Math.max(personalSaved, 0);
-
-    return { label, grocerySaved, personalSaved, otherSaved };
-  });
-
-  // Update totals
-  const groceryEl = document.getElementById('grocerySaved');
-  const personalEl = document.getElementById('personalSaved');
-  if (groceryEl) groceryEl.innerHTML = `<span style="font-size:14px">$ </span>${groceryTotal.toFixed(2)}`;
-  if (personalEl) personalEl.innerHTML = `<span style="font-size:14px">$ </span>${personalTotal.toFixed(2)}`;
-
-  // Stars for grocery: 1 star per completed week with savings
-  const groceryWeeksWithSavings = weekRows.filter(w => w.grocerySaved > 0).length;
-  const starsEl = document.getElementById('groceryStars');
-  if (starsEl) starsEl.textContent = groceryWeeksWithSavings > 0 ? '⭐'.repeat(Math.min(groceryWeeksWithSavings, 10)) : '—';
-
-  // Roses for personal: 1 rose per completed week with savings
-  const personalWeeksWithSavings = weekRows.filter(w => w.personalSaved > 0).length;
-  const rosesEl = document.getElementById('personalRoses');
-  if (rosesEl) rosesEl.textContent = personalWeeksWithSavings > 0 ? '🌹'.repeat(Math.min(personalWeeksWithSavings, 10)) : '—';
-
-  // Weekly history
-  const histEl = document.getElementById('piggyHistory');
-  const recent = weekRows.slice(-8).reverse();
-  if (recent.length === 0 || !recent.some(w => w.grocerySaved !== 0 || w.personalSaved !== 0)) {
-    histEl.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:12px;font-style:italic">记录第一周后这里会显示明细</div>';
-    return;
-  }
-
-  histEl.innerHTML = recent.map(w => {
-    const gSign = w.grocerySaved >= 0 ? '+' : '';
-    const pSign = w.personalSaved >= 0 ? '+' : '';
-    const gCls = w.grocerySaved >= 0 ? 'saved' : 'over';
-    const pCls = w.personalSaved >= 0 ? 'saved' : 'over';
-    return `<div class="piggy-week-item" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;align-items:center">
-      <div class="piggy-week-label">${w.label}</div>
-      <div class="piggy-week-amt ${gCls}" style="text-align:center;font-size:13px">${gSign}$${w.grocerySaved.toFixed(0)}<span style="font-size:10px;color:var(--text3);margin-left:2px">🥬</span></div>
-      <div class="piggy-week-amt ${pCls}" style="text-align:right;font-size:13px">${pSign}$${w.personalSaved.toFixed(0)}<span style="font-size:10px;color:var(--text3);margin-left:2px">🌹</span></div>
-    </div>`;
-  }).join('');
-}
-
-function renderCalendar() {
-  const y = calState.year, m = calState.month;
-  document.getElementById('calMonthLabel').textContent = `${y}年${m+1}月`;
-
-  const grid = document.getElementById('calGrid');
-  const dows = ['日','一','二','三','四','五','六'];
-  let html = dows.map(d => `<div class="cal-dow">${d}</div>`).join('');
-
-  const firstDay = new Date(y, m, 1).getDay();
-  const daysInMonth = new Date(y, m+1, 0).getDate();
-  const daysInPrev = new Date(y, m, 0).getDate();
-  const todayStr = today();
-
-  // Build tx map for this month
-  const txMap = {};
-  data.transactions.forEach(t => {
-    const d = t.date.slice(0,10);
-    if (!txMap[d]) txMap[d] = {exp:0, inc:0};
-    if (t.type === 'expense') txMap[d].exp += t.amount;
-    else if (t.type === 'income') txMap[d].inc += t.amount;
-  });
-
-  // Prev month padding
-  for (let i = firstDay - 1; i >= 0; i--) {
-    const day = daysInPrev - i;
-    html += `<div class="cal-day other-month"><div class="cal-day-num">${day}</div></div>`;
-  }
-
-  // Current month
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isToday = dateStr === todayStr;
-    const isSel = dateStr === calState.selectedDate;
-    const dayData = txMap[dateStr];
-
-    let balanceHtml = '';
-    if (dayData) {
-      const net = dayData.inc - dayData.exp;
-      const balCls = net >= 0 ? 'pos' : 'neg';
-      const sign = net >= 0 ? '+' : '';
-      balanceHtml = `<div class="cal-day-balance ${balCls}">${sign}${Math.abs(net) < 100 ? net.toFixed(0) : Math.round(net/10)*10/10}</div>`;
-    }
-
-    html += `<div class="cal-day ${isToday?'today':''} ${isSel&&!isToday?'selected':''}" onclick="selectCalDay('${dateStr}')">
-      <div class="cal-day-num">${d}</div>
-      ${balanceHtml}
-    </div>`;
-  }
-
-  // Next month padding
-  const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
-  let nextDay = 1;
-  for (let i = firstDay + daysInMonth; i < totalCells; i++) {
-    html += `<div class="cal-day other-month"><div class="cal-day-num">${nextDay++}</div></div>`;
-  }
-
-  grid.innerHTML = html;
-
-  // Re-render day detail if selected
-  if (calState.selectedDate) selectCalDay(calState.selectedDate, true);
-}
-
-function selectCalDay(dateStr, silent) {
-  calState.selectedDate = dateStr;
-  if (!silent) renderCalendar();
-
-  const txs = data.transactions.filter(t => t.date.slice(0,10) === dateStr);
-  const exp = txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-  const inc = txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-
-  const d = new Date(dateStr);
-  const dateLabel = `${d.getMonth()+1}月${d.getDate()}日`;
-
-  const detail = document.getElementById('calDayDetail');
-  if (txs.length === 0) {
-    detail.innerHTML = `<div class="cal-detail-header">
-      <div class="cal-detail-date">${dateLabel}</div>
-    </div>
-    <div style="color:var(--text3);font-size:13px;font-style:italic;text-align:center;padding:8px">这天没有记录</div>`;
-    return;
-  }
-
-  detail.innerHTML = `<div class="cal-detail-header">
-    <div class="cal-detail-date">${dateLabel}</div>
-    <div class="cal-detail-totals">
-      ${exp > 0 ? `<div class="cal-detail-stat exp">-$${exp.toFixed(2)}</div>` : ''}
-      ${inc > 0 ? `<div class="cal-detail-stat inc">+$${inc.toFixed(2)}</div>` : ''}
-    </div>
-  </div>
-  <div class="tx-list">${txs.map(t => renderTxItem(t)).join('')}</div>`;
-}
-
-function changeCalMonth(delta) {
-  calState.month += delta;
-  if (calState.month < 0) { calState.month = 11; calState.year--; }
-  if (calState.month > 11) { calState.month = 0; calState.year++; }
-  renderCalendar();
-}
-
-
-// ============================================================
-// STICKER PICKER
-// ============================================================
-const STICKER_COUNT = 20;
-const STICKER_BASE = 'stickers/sticker_';
-
-let _stickerCallback = null;
-let _currentStickerCatId = null;
-
-function openStickerPicker(catId, callback) {
-  _currentStickerCatId = catId;
-  _stickerCallback = callback;
-
-  const grid = document.getElementById('stickerGrid');
-  const currentSticker = (data.catStickers||{})[catId] || null;
-
-  // Group label style
-  const groupLabel = (text) => `<div class="sticker-group-label">${text}</div>`;
-
-  let html = `<div class="sticker-none" onclick="selectSticker(null)" title="清除">✕</div>`;
-
-  // Set 1: sticker_01 - sticker_20
-  html += groupLabel('套装一');
-  for (let i = 1; i <= 20; i++) {
-    const num = String(i).padStart(2, '0');
-    const src = 'stickers/sticker_' + num + '.png';
-    const sel = currentSticker === src ? ' selected' : '';
-    html += `<div class="sticker-option${sel}" onclick="selectSticker('${src}')">
-      <img src="${src}" alt="sticker ${num}" loading="lazy">
-    </div>`;
-  }
-
-  // Set 2: little_prince_icon_01 - little_prince_icon_21
-  html += groupLabel('套装二');
-  for (let i = 1; i <= 21; i++) {
-    const num = String(i).padStart(2, '0');
-    const src = 'stickers/little_prince_icon_' + num + '.png';
-    const sel = currentSticker === src ? ' selected' : '';
-    html += `<div class="sticker-option${sel}" onclick="selectSticker('${src}')">
-      <img src="${src}" alt="icon ${num}" loading="lazy">
-    </div>`;
-  }
-
-  grid.innerHTML = html;
-  document.getElementById('stickerPickerOverlay').classList.add('open');
-}
-
-function selectSticker(src) {
-  if (!data.catStickers) data.catStickers = {};
-  if (src) {
-    data.catStickers[_currentStickerCatId] = src;
-  } else {
-    delete data.catStickers[_currentStickerCatId];
-  }
-  save();
-  document.getElementById('stickerPickerOverlay').classList.remove('open');
-  if (_stickerCallback) _stickerCallback();
-  renderExpensePage();
-  renderIncomePage();
-}
-
-document.getElementById('stickerPickerOverlay').addEventListener('click', function(e) {
-  if (e.target === this) this.classList.remove('open');
-});
-
-// ============================================================
-// INIT
-// ============================================================
-initStars();
-document.getElementById('expDate').value = today();
-document.getElementById('incDate').value = today();
-document.getElementById('trfDate').value = today();
-document.getElementById('payDate').value = today();
-// Mark period function as ready
-window._doSetReportPeriod = function(period) {
-  ui.reportPeriod = period;
-  ui.reportPeriodOffset = 0;
-  ['week','month','year'].forEach(function(p) {
-    var btn = document.getElementById('sp'+p.charAt(0).toUpperCase()+p.slice(1));
-    if (btn) btn.classList.toggle('active', p===period);
-  });
-  renderReport();
-};
-window._reportPeriodReady = true;
-if (_pendingPeriod) { window._doSetReportPeriod(_pendingPeriod); _pendingPeriod = null; }
-
-load().then(() => render());
-</script>
-</body>
-</html>
 <!-- ===== CALENDAR ===== -->
 <div class="section" id="section-calendar">
 
@@ -3201,39 +2399,167 @@ load().then(() => render());
     <div class="sticker-grid" id="stickerGrid"></div>
   </div>
 </div>
+
+<!-- Edit Transaction Modal -->
+<div class="modal-overlay" id="editTxModal">
+  <div class="modal">
+    <div class="modal-title">编辑记录</div>
+    <input type="hidden" id="editTxId">
+    <input type="hidden" id="editTxType">
+
+    <div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">金额</label>
+      <div class="amount-wrap">
+        <span class="amount-symbol">$</span>
+        <input class="form-input" type="number" id="editTxAmount" inputmode="decimal" step="0.01">
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:12px" id="editTxCatGroup">
+      <label class="form-label">分类</label>
+      <div class="cat-wrap" id="editTxCatWrap" style="max-height:120px;overflow-y:auto"></div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">备注</label>
+      <input class="form-input" type="text" id="editTxNote" placeholder="备注...">
+    </div>
+
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="form-group">
+        <label class="form-label">日期</label>
+        <input class="form-input" type="date" id="editTxDate">
+      </div>
+      <div class="form-group">
+        <label class="form-label">账户</label>
+        <select class="form-select" id="editTxAccount"></select>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('editTxModal')">取消</button>
+      <button class="modal-confirm" onclick="saveEditTx()">保存</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
+<!-- ===== REPORT ===== -->
+<div class="section" id="section-report">
+
+  <!-- Period Toggle -->
+  <div class="stats-period-row">
+    <button class="stats-period-btn active" id="spWeek" onclick="setReportPeriod('week')">周</button>
+    <button class="stats-period-btn" id="spMonth" onclick="setReportPeriod('month')">月</button>
+    <button class="stats-period-btn" id="spYear" onclick="setReportPeriod('year')">年</button>
+  </div>
+
+  <!-- Period Nav -->
+  <div class="stats-nav-row">
+    <button class="stats-nav-btn" onclick="changeReportPeriod(-1)">◀</button>
+    <div class="stats-nav-label" id="statsNavLabel">2026年5月</div>
+    <button class="stats-nav-btn" onclick="changeReportPeriod(1)">▶</button>
+  </div>
+
+  <!-- Donut Chart -->
+  <div class="donut-card">
+    <div class="donut-wrap">
+      <svg id="donutSvg" viewBox="0 0 200 200" width="180" height="180">
+        <circle cx="100" cy="100" r="70" fill="none" stroke="rgba(140,120,180,0.1)" stroke-width="32"/>
+        <g id="donutArcs"></g>
+      </svg>
+      <div class="donut-center">
+        <div class="donut-center-label" id="donutLabel">总支出</div>
+        <div class="donut-center-amount" id="donutAmount">$0</div>
+      </div>
+    </div>
+  </div>
+  <!-- Color Legend -->
+  <div id="donutLegend" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px;padding:0 8px"></div>
+
+  <!-- Expense / Income toggle -->
+  <div class="stats-type-row">
+    <button class="stats-type-btn active" id="stExp" onclick="setStatsType('expense')">支出</button>
+    <button class="stats-type-btn" id="stInc" onclick="setStatsType('income')">收入</button>
+  </div>
+
+  <!-- Category breakdown -->
+  <div id="statsCatList"></div>
+
+  <!-- Summary -->
+  <div class="stats-summary-row">
+    <div class="stats-summary-card">
+      <div class="stats-summary-label">总收入</div>
+      <div class="stats-summary-value inc" id="statsTotalInc">$0</div>
+    </div>
+    <div class="stats-summary-card">
+      <div class="stats-summary-label">总支出</div>
+      <div class="stats-summary-value exp" id="statsTotalExp">$0</div>
+    </div>
+    <div class="stats-summary-card">
+      <div class="stats-summary-label">结余</div>
+      <div class="stats-summary-value" id="statsTotalNet">$0</div>
+    </div>
+  </div>
+
+  <div class="petit-quote">"所有的大人曾经都是小孩，虽然只有少数人记得这一点。"</div>
+</div>
+
+</div>
+</div><!-- end .content -->
 
 <script>
-// Defer period setting until DOM+JS fully loaded
-var _pendingPeriod = null;
-function setReportPeriod(p) {
-  if (window._reportPeriodReady) {
-    window._doSetReportPeriod(p);
-  } else {
-    _pendingPeriod = p;
+// ============================================================
+// SUPABASE
+// ============================================================
+const SUPA_URL = 'https://mjqjyztalpbgaiuorplg.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcWp5enRhbHBiZ2FpdW9ycGxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3NTgxMzMsImV4cCI6MjA5NTMzNDEzM30.WxADDzcxxbGyojJ0vUThcsQdoGDVYyEzyjYyj8NnNpk';
+
+const supa = {
+  async get(table) {
+    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?select=*`, {
+      headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
+    });
+    return r.ok ? r.json() : [];
+  },
+  async upsert(table, rows) {
+    if (!rows || rows.length === 0) return;
+    await fetch(`${SUPA_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify(rows)
+    });
+  },
+  async delete(table, id) {
+    await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
+    });
   }
-}
-function setStatsPeriod(p) { setReportPeriod(p); }
+};
 
 // ============================================================
 // DATA
 // ============================================================
 const EXP_CATEGORIES = [
-  {id:'groceries', label:'买菜', icon:'✦', sub:['超市','农贸市场','网购食材']},
-  {id:'dining', label:'餐饮', icon:'✦', sub:['外卖','餐厅','咖啡','快餐']},
-  {id:'transport', label:'交通', icon:'✦', sub:['地铁','打车','公交','加油','停车']},
-  {id:'shopping', label:'购物', icon:'✦', sub:['衣服','日用品','电子','家居']},
-  {id:'entertainment', label:'娱乐', icon:'✦', sub:['电影','游玩','订阅','健身']},
-  {id:'health', label:'医疗', icon:'✦', sub:['药品','看诊','保险']},
-  {id:'bills', label:'账单', icon:'✦', sub:['房租','水电','网络','手机']},
-  {id:'gift', label:'礼物', icon:'✦', sub:['生日','节日','婚礼']},
-  {id:'other', label:'其他', icon:'✦', sub:[]},
+  {id:'groceries', label:'买菜', sub:['超市','农贸市场','网购食材']},
+  {id:'dining', label:'餐饮', sub:['外卖','餐厅','咖啡','快餐']},
+  {id:'transport', label:'交通', sub:['地铁/公交','打车','加油','停车','机票']},
+  {id:'shopping', label:'购物', sub:['衣服','鞋包','日用品','电子','家居']},
+  {id:'entertainment', label:'娱乐', sub:['电影','演出','游戏','订阅','健身']},
+  {id:'health', label:'医疗', sub:['看诊','药品','保险','牙医']},
+  {id:'bills', label:'账单', sub:['房租','水电费','网络','手机话费']},
+  {id:'gift', label:'礼物', sub:['生日','节日','婚礼','红包']},
+  {id:'travel', label:'旅行', sub:['酒店','景点','当地交通']},
+  {id:'beauty', label:'美容', sub:['理发','护肤','美甲']},
+  {id:'pet', label:'宠物', sub:['食物','医疗','用品']},
+  {id:'education', label:'教育', sub:['学费','书籍','课程']},
+  {id:'other', label:'其他', sub:[]},
 ];
 
 const DEFAULT_ACCOUNTS = [
   {id:'cash', name:'现金', type:'cash', balance:0},
   {id:'gift_money', name:'礼金', type:'cash', balance:0},
-  {id:'savings', name:'Savings Account', type:'debit', balance:0},
+  {id:'savings', name:'Savings Account', type:'savings', balance:0},
   {id:'debit', name:'Debit Account', type:'debit', balance:0},
   {id:'discover', name:'Discover Credit', type:'credit', balance:0, credit_limit:0},
   {id:'quicksilver', name:'Quicksilver Credit', type:'credit', balance:0, credit_limit:0},
@@ -3245,10 +2571,7 @@ const DEFAULT_BUDGETS = [
   {id:'personal', name:'个人预算', amount:150, period:'weekly'},
 ];
 
-const DEFAULT_INC_CATS = ['工资','奖金','副业','礼金','报销','其他'];
-
-// Expense categories with optional subcategories
-// DEFAULT_EXP_CATS replaced by EXP_CATEGORIES above
+const DEFAULT_INC_CATS = ['工资','奖金','副业','礼金','报销','投资收益','其他'];
 
 let data = {
   accounts: [],
@@ -3267,49 +2590,21 @@ let ui = {
   currentExpSubCat: '',
   currentIncCat: '',
   reportPeriod: 'month',
-  reportMonth: new Date().getMonth(),
+  reportPeriodOffset: 0,
   reportYear: new Date().getFullYear(),
-  reportWeekOffset: 0,
+  reportMonth: new Date().getMonth(),
+  statsType: 'expense',
+};
+
+let calState = {
+  month: new Date().getMonth(),
+  year: new Date().getFullYear(),
+  selectedDate: null,
 };
 
 // ============================================================
-// SUPABASE
+// LOAD / SAVE
 // ============================================================
-const SUPA_URL = 'https://mjqjyztalpbgaiuorplg.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qcWp5enRhbHBiZ2FpdW9ycGxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3NTgxMzMsImV4cCI6MjA5NTMzNDEzM30.WxADDzcxxbGyojJ0vUThcsQdoGDVYyEzyjYyj8NnNpk';
-
-const supa = {
-  async get(table) {
-    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?select=*`, {
-      headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
-    });
-    return r.ok ? r.json() : [];
-  },
-  async upsert(table, rows) {
-    await fetch(`${SUPA_URL}/rest/v1/${table}`, {
-      method: 'POST',
-      headers: {
-        apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify(rows)
-    });
-  },
-  async delete(table, id) {
-    await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {
-      method: 'DELETE',
-      headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
-    });
-  },
-  async deleteAll(table) {
-    await fetch(`${SUPA_URL}/rest/v1/${table}?id=neq.___none___`, {
-      method: 'DELETE',
-      headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` }
-    });
-  }
-};
-
 function showLoading(msg) {
   let el = document.getElementById('loadingOverlay');
   if (!el) {
@@ -3322,7 +2617,6 @@ function showLoading(msg) {
   document.getElementById('loadingMsg').textContent = msg || '正在连接星球…';
   el.style.display = 'flex';
 }
-
 function hideLoading() {
   const el = document.getElementById('loadingOverlay');
   if (el) el.style.display = 'none';
@@ -3331,110 +2625,98 @@ function hideLoading() {
 async function load() {
   showLoading('正在连接星球…');
   try {
-    // Try loading from Supabase
     const [txs, accs, budgets, settings] = await Promise.all([
-      supa.get('pp_transactions'),
-      supa.get('pp_accounts'),
-      supa.get('pp_budgets'),
-      supa.get('pp_settings'),
+      supa.get('pp_transactions'), supa.get('pp_accounts'),
+      supa.get('pp_budgets'), supa.get('pp_settings'),
     ]);
-
-    // Accounts: use defaults if empty
-    data.accounts = accs.length > 0 ? accs : DEFAULT_ACCOUNTS.map(a => ({...a}));
+    data.accounts = accs.length > 0 ? accs : DEFAULT_ACCOUNTS.map(a=>({...a}));
     data.transactions = txs || [];
-    data.budgets = budgets.length > 0 ? budgets : DEFAULT_BUDGETS.map(b => ({...b}));
-
-    // Income categories from settings
-    const incCatSetting = settings.find(s => s.key === 'inc_categories');
+    data.budgets = budgets.length > 0 ? budgets : DEFAULT_BUDGETS.map(b=>({...b}));
+    const incCatSetting = settings.find(s=>s.key==='inc_categories');
     data.incCategories = incCatSetting ? JSON.parse(incCatSetting.value) : [...DEFAULT_INC_CATS];
-
-    const expCatSetting = settings.find(s => s.key === 'exp_categories');
+    const expCatSetting = settings.find(s=>s.key==='exp_categories');
     data.expCategories = expCatSetting ? JSON.parse(expCatSetting.value) : [];
-
-    const balHistSetting = settings.find(s => s.key === 'balance_history');
+    const balHistSetting = settings.find(s=>s.key==='balance_history');
     data.balanceHistory = balHistSetting ? JSON.parse(balHistSetting.value) : [];
-
-    const overridesSetting = settings.find(s => s.key === 'exp_cat_overrides');
+    const overridesSetting = settings.find(s=>s.key==='exp_cat_overrides');
     data.expCatOverrides = overridesSetting ? JSON.parse(overridesSetting.value) : {};
-
-    const stickersSetting = settings.find(s => s.key === 'cat_stickers');
+    const stickersSetting = settings.find(s=>s.key==='cat_stickers');
     data.catStickers = stickersSetting ? JSON.parse(stickersSetting.value) : {};
-
-    // Restore account extras (credit_limit, include_in_net)
-    const accExtrasSetting = settings.find(s => s.key === 'account_extras');
+    const accExtrasSetting = settings.find(s=>s.key==='account_extras');
     if (accExtrasSetting) {
       const extras = JSON.parse(accExtrasSetting.value);
       extras.forEach(e => {
-        const acc = data.accounts.find(a => a.id === e.id);
-        if (acc) {
-          acc.credit_limit = e.credit_limit;
-          acc.include_in_net = e.include_in_net;
-        }
+        const acc = data.accounts.find(a=>a.id===e.id);
+        if (acc) { acc.credit_limit = e.credit_limit; acc.include_in_net = e.include_in_net; }
       });
     }
-
-    // If first time, push defaults to Supabase
-    if (accs.length === 0) await supa.upsert('pp_accounts', data.accounts);
+    if (accs.length === 0) await supa.upsert('pp_accounts', data.accounts.map(a=>({id:a.id,name:a.name,type:a.type,balance:a.balance})));
     if (budgets.length === 0) await supa.upsert('pp_budgets', data.budgets);
-    if (!incCatSetting) await supa.upsert('pp_settings', [{key:'inc_categories', value: JSON.stringify(data.incCategories)}]);
-    if (!expCatSetting) await supa.upsert('pp_settings', [{key:'exp_categories', value: JSON.stringify(data.expCategories)}]);
-
+    if (!incCatSetting) await supa.upsert('pp_settings', [{key:'inc_categories', value:JSON.stringify(data.incCategories)}]);
   } catch(e) {
-    // Fallback to localStorage
+    console.warn('Supabase load failed, using localStorage');
     const saved = localStorage.getItem('pp_budget_v2');
-    if (saved) { const d = JSON.parse(saved); Object.assign(data, d); }
-    else {
-      data.accounts = DEFAULT_ACCOUNTS.map(a => ({...a}));
-      data.transactions = [];
-      data.budgets = DEFAULT_BUDGETS.map(b => ({...b}));
-      data.incCategories = [...DEFAULT_INC_CATS];
-    }
+    if (saved) Object.assign(data, JSON.parse(saved));
+    else { data.accounts = DEFAULT_ACCOUNTS.map(a=>({...a})); data.budgets = DEFAULT_BUDGETS.map(b=>({...b})); data.incCategories=[...DEFAULT_INC_CATS]; }
   }
-
-  if (!data.incCategories || !data.incCategories.length) data.incCategories = [...DEFAULT_INC_CATS];
-  if (!data.expCategories) data.expCategories = [];
-  if (!data.balanceHistory) data.balanceHistory = [];
-  if (!data.budgets || !data.budgets.length) data.budgets = DEFAULT_BUDGETS.map(b => ({...b}));
-  ui.currentIncCat = data.incCategories[0] || '工资';
+  if (!data.incCategories||!data.incCategories.length) data.incCategories=[...DEFAULT_INC_CATS];
+  if (!data.expCategories) data.expCategories=[];
+  if (!data.expCatOverrides) data.expCatOverrides={};
+  if (!data.catStickers) data.catStickers={};
+  if (!data.balanceHistory) data.balanceHistory=[];
+  ui.currentIncCat = data.incCategories[0]||'工资';
   hideLoading();
 }
 
 async function save() {
-  // Always save to localStorage as backup
   localStorage.setItem('pp_budget_v2', JSON.stringify(data));
-  // Save to Supabase in background (don't await)
   try {
-    // Strip fields not in Supabase schema, store extras in settings
-    const accountsForDB = data.accounts.map(a => ({
-      id: a.id, name: a.name, type: a.type, balance: a.balance
-    }));
+    const accountsForDB = data.accounts.map(a=>({id:a.id,name:a.name,type:a.type,balance:a.balance}));
     await Promise.all([
       supa.upsert('pp_accounts', accountsForDB),
       supa.upsert('pp_budgets', data.budgets),
-      supa.upsert('pp_settings', [{key:'inc_categories', value: JSON.stringify(data.incCategories)}]),
-      supa.upsert('pp_settings', [{key:'exp_categories', value: JSON.stringify(data.expCategories)}]),
-      supa.upsert('pp_settings', [{key:'balance_history', value: JSON.stringify(data.balanceHistory)}]),
-      supa.upsert('pp_settings', [{key:'account_extras', value: JSON.stringify(data.accounts.map(a=>({id:a.id,credit_limit:a.credit_limit,include_in_net:a.include_in_net})))}]),
-      supa.upsert('pp_settings', [{key:'exp_cat_overrides', value: JSON.stringify(data.expCatOverrides||{})}]),
-      supa.upsert('pp_settings', [{key:'cat_stickers', value: JSON.stringify(data.catStickers||{})}]),
+      supa.upsert('pp_settings', [{key:'inc_categories',value:JSON.stringify(data.incCategories)}]),
+      supa.upsert('pp_settings', [{key:'exp_categories',value:JSON.stringify(data.expCategories)}]),
+      supa.upsert('pp_settings', [{key:'balance_history',value:JSON.stringify(data.balanceHistory)}]),
+      supa.upsert('pp_settings', [{key:'exp_cat_overrides',value:JSON.stringify(data.expCatOverrides||{})}]),
+      supa.upsert('pp_settings', [{key:'cat_stickers',value:JSON.stringify(data.catStickers||{})}]),
+      supa.upsert('pp_settings', [{key:'account_extras',value:JSON.stringify(data.accounts.map(a=>({id:a.id,credit_limit:a.credit_limit,include_in_net:a.include_in_net})))}]),
     ]);
-  } catch(e) { console.warn('Supabase save failed, localStorage backup used'); }
+  } catch(e) { console.warn('Supabase save failed'); }
 }
 
 async function saveTx(tx) {
   localStorage.setItem('pp_budget_v2', JSON.stringify(data));
-  try { await supa.upsert('pp_transactions', [tx]); }
-  catch(e) { console.warn('Supabase tx save failed'); }
+  try { await supa.upsert('pp_transactions', [tx]); } catch(e) {}
 }
-
 async function deleteTxRemote(id) {
   localStorage.setItem('pp_budget_v2', JSON.stringify(data));
-  try { await supa.delete('pp_transactions', id); }
-  catch(e) { console.warn('Supabase delete failed'); }
+  try { await supa.delete('pp_transactions', id); } catch(e) {}
 }
 
-function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+// ============================================================
+// HELPERS
+// ============================================================
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function today() { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function getWeekStart() { const now=new Date(),d=new Date(now); d.setDate(now.getDate()-now.getDay()); d.setHours(0,0,0,0); return d; }
+function formatDate(s) {
+  const d=new Date(s),now=new Date();
+  const today2=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const target=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  const diff=Math.round((today2-target)/86400000);
+  if(diff===0)return'今天';if(diff===1)return'昨天';if(diff===2)return'前天';
+  return`${d.getMonth()+1}月${d.getDate()}日`;
+}
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+function allExpCats() {
+  const builtInIds=EXP_CATEGORIES.map(c=>c.id);
+  const extra=(data.expCategories||[]).filter(c=>!builtInIds.includes(c.id));
+  return EXP_CATEGORIES.concat(extra);
 }
 
 // ============================================================
@@ -3449,1502 +2731,815 @@ function render() {
 }
 
 function renderHeader() {
-  const now = new Date();
-  const days = ['日','一','二','三','四','五','六'];
-  document.getElementById('headerDate').innerHTML =
-    `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}<br>星期${days[now.getDay()]}`;
+  const now=new Date();
+  const days=['日','一','二','三','四','五','六'];
+  document.getElementById('headerDate').innerHTML=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}<br>星期${days[now.getDay()]}`;
 }
 
 function renderOverview() {
-  const now = new Date();
-  const mTxs = data.transactions.filter(t => {
-    const d = new Date(t.date);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  });
-
-  let inc = 0, exp = 0;
-  mTxs.forEach(t => {
-    if (t.type === 'income') inc += t.amount;
-    else if (t.type === 'expense') exp += t.amount;
-  });
-  const net = inc - exp;
-
-  document.getElementById('overviewMonth').textContent =
-    `${now.getFullYear()}年${now.getMonth()+1}月`;
-
-  const netEl = document.getElementById('overviewNet');
-  netEl.innerHTML = `<span>$ </span>${Math.abs(net).toFixed(2)}`;
-  netEl.className = 'overview-net' + (net >= 0 ? ' positive' : ' negative');
-  if (net < 0) netEl.innerHTML = `<span>-$ </span>${Math.abs(net).toFixed(2)}`;
-
-  document.getElementById('overviewInc').textContent = `$${inc.toFixed(0)}`;
-  document.getElementById('overviewExp').textContent = `$${exp.toFixed(0)}`;
-  document.getElementById('overviewCount').textContent = mTxs.length;
+  const now=new Date();
+  const mTxs=data.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
+  let inc=0,exp=0;
+  mTxs.forEach(t=>{if(t.type==='income')inc+=parseFloat(t.amount);else if(t.type==='expense')exp+=parseFloat(t.amount);});
+  const net=inc-exp;
+  const netEl=document.getElementById('overviewNet');
+  if(netEl){netEl.innerHTML=`<span>$ </span>${Math.abs(net).toFixed(2)}`;netEl.className='overview-net'+(net>=0?' positive':' negative');}
+  const incEl=document.getElementById('overviewInc'); if(incEl) incEl.textContent=`$${inc.toFixed(0)}`;
+  const expEl=document.getElementById('overviewExp'); if(expEl) expEl.textContent=`$${exp.toFixed(0)}`;
+  const cntEl=document.getElementById('overviewCount'); if(cntEl) cntEl.textContent=mTxs.length;
+  const mEl=document.getElementById('overviewMonth'); if(mEl) mEl.textContent=`${now.getFullYear()}年${now.getMonth()+1}月`;
 
   // Accounts
-  const accEl = document.getElementById('overviewAccounts');
-  accEl.innerHTML = data.accounts.map(a => {
-    const b = parseFloat(a.balance);
-    const cls = b > 0 ? 'pos' : (b < 0 ? 'neg' : 'zero');
-    const typeLabel = {cash:'现金',debit:'储蓄卡',credit:'信用卡'}[a.type] || a.type;
-    return `<div class="account-chip" onclick="goTo('assets')">
-      <div class="account-chip-type">${typeLabel}</div>
-      <div class="account-chip-name">${a.name}</div>
-      <div class="account-chip-balance ${cls}">$${Math.abs(b).toFixed(2)}</div>
-    </div>`;
+  const accEl=document.getElementById('overviewAccounts');
+  if(accEl) accEl.innerHTML=data.accounts.map(a=>{
+    const b=parseFloat(a.balance),cls=b>0?'pos':b<0?'neg':'zero';
+    const typeLabel={cash:'现金',debit:'储蓄卡',savings:'储蓄',credit:'信用卡',digital:'数字'}[a.type]||a.type;
+    return`<div class="account-chip" onclick="goTo('assets')"><div class="account-chip-type">${typeLabel}</div><div class="account-chip-name">${a.name}</div><div class="account-chip-balance ${cls}">$${Math.abs(b).toFixed(2)}</div></div>`;
   }).join('');
 
   // Budgets
-  const budgetEl = document.getElementById('overviewBudgets');
-  const weekStart = getWeekStart();
-  budgetEl.innerHTML = data.budgets.map(b => {
-    const spent = data.transactions
-      .filter(t => t.type === 'expense' && t.budget_id === b.id && new Date(t.date) >= weekStart)
-      .reduce((s,t) => s + t.amount, 0);
-    const pct = Math.min(spent / b.amount * 100, 100);
-    const fillCls = pct < 70 ? 'safe' : (pct < 100 ? 'warn' : 'over');
-    return `<div class="budget-card">
-      <div class="budget-card-header">
-        <div>
-          <div class="budget-card-name">${b.name}</div>
-          <div class="budget-card-meta">每周 $${b.amount}</div>
-        </div>
-        <div class="budget-card-amounts">
-          <div class="budget-card-spent">$${spent.toFixed(0)}</div>
-          <div class="budget-card-total">/ $${b.amount}</div>
-        </div>
-      </div>
-      <div class="budget-track"><div class="budget-fill ${fillCls}" style="width:${pct}%"></div></div>
-    </div>`;
+  const weekStart=getWeekStart();
+  const budgetEl=document.getElementById('overviewBudgets');
+  if(budgetEl) budgetEl.innerHTML=data.budgets.map(b=>{
+    const spent=data.transactions.filter(t=>t.type==='expense'&&t.budget_id===b.id&&new Date(t.date)>=weekStart).reduce((s,t)=>s+parseFloat(t.amount),0);
+    const pct=Math.min(spent/b.amount*100,100);
+    const fillCls=pct<70?'safe':pct<100?'warn':'over';
+    return`<div class="budget-card"><div class="budget-card-header"><div><div class="budget-card-name">${b.name}</div><div class="budget-card-meta">每周 $${b.amount}</div></div><div class="budget-card-amounts"><div class="budget-card-spent">$${spent.toFixed(0)}</div><div class="budget-card-total">/ $${b.amount}</div></div></div><div class="budget-track"><div class="budget-fill ${fillCls}" style="width:${pct}%"></div></div></div>`;
   }).join('');
 
   // Recent txs
-  const recent = [...data.transactions]
-    .sort((a,b) => new Date(b.date) - new Date(a.date))
-    .slice(0, 8);
-  document.getElementById('overviewTxList').innerHTML =
-    recent.length ? recent.map(t => renderTxItem(t)).join('') :
-    `<div class="empty-state"><div class="empty-icon">🌙</div><div class="empty-text">还没有任何记录<br>从支出或收入页面开始吧</div></div>`;
+  const recent=[...data.transactions].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,8);
+  const txEl=document.getElementById('overviewTxList');
+  if(txEl) txEl.innerHTML=recent.length?recent.map(t=>renderTxItem(t)).join(''):`<div class="empty-state"><div class="empty-icon">🌙</div><div class="empty-text">还没有记录</div></div>`;
 }
 
 function renderExpensePage() {
-  // Categories
-  const expWrap = document.getElementById('expCatWrap');
-  // Built-in cats + only custom cats not already in built-ins
-  const builtInIds = EXP_CATEGORIES.map(c=>c.id);
-  const extraCats = (data.expCategories||[]).filter(c => !builtInIds.includes(c.id));
-  const allExpCats = EXP_CATEGORIES.concat(extraCats);
-  expWrap.innerHTML = allExpCats.map(c => {
-    const sticker = (data.catStickers||{})[c.id];
-    return `<div class="cat-pill ${ui.currentExpCat === c.id ? 'active' : ''}" onclick="setExpCat('${c.id}')" style="padding:${sticker?'5px 10px':'8px 14px'}">
-      ${sticker ? `<img class="cat-pill-sticker" src="${sticker}" alt="${c.label}" style="width:28px;height:28px;object-fit:contain;display:block;margin:0 auto 2px">` : ''}
-      <span style="font-size:12px">${c.label}</span>
-    </div>`;
+  const expWrap=document.getElementById('expCatWrap');
+  if(!expWrap) return;
+  const cats=allExpCats();
+  expWrap.innerHTML=cats.map(c=>{
+    const sticker=(data.catStickers||{})[c.id];
+    const isActive=ui.currentExpCat===c.id;
+    return`<div class="cat-pill${isActive?' active':''}" onclick="setExpCat('${c.id}')" style="padding:${sticker?'5px 10px':'8px 14px'}">${sticker?`<img src="${sticker}" style="width:28px;height:28px;object-fit:contain;display:block;margin:0 auto 2px">`:''}<span style="font-size:12px">${c.label}</span></div>`;
   }).join('');
-
-  // Account selects
-  const allAccOpts = data.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
-  const creditOpts = data.accounts.filter(a=>a.type==='credit').map(a => `<option value="${a.id}">${a.name}</option>`).join('');
-  const nonCreditOpts = data.accounts.filter(a=>a.type!=='credit').map(a => `<option value="${a.id}">${a.name}</option>`).join('');
-
-  document.getElementById('expAccount').innerHTML = allAccOpts;
-  document.getElementById('trfFrom').innerHTML = allAccOpts;
-  document.getElementById('trfTo').innerHTML = allAccOpts;
-  document.getElementById('payFrom').innerHTML = nonCreditOpts || allAccOpts;
-  document.getElementById('payTo').innerHTML = creditOpts || allAccOpts;
-
-  // Tx list
-  const txs = [...data.transactions]
-    .filter(t => t.type === 'expense' || t.type === 'transfer' || t.type === 'payment')
-    .sort((a,b) => new Date(b.date) - new Date(a.date));
-  document.getElementById('expTxList').innerHTML =
-    txs.length ? renderGroupedTxs(txs) :
-    `<div class="empty-state"><div class="empty-icon">🌹</div><div class="empty-text">还没有支出记录</div></div>`;
+  const allOpts=data.accounts.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
+  const creditOpts=data.accounts.filter(a=>a.type==='credit').map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
+  const nonCreditOpts=data.accounts.filter(a=>a.type!=='credit').map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
+  const expAcc=document.getElementById('expAccount'); if(expAcc) expAcc.innerHTML=allOpts;
+  const trfFrom=document.getElementById('trfFrom'); if(trfFrom) trfFrom.innerHTML=allOpts;
+  const trfTo=document.getElementById('trfTo'); if(trfTo) trfTo.innerHTML=allOpts;
+  const payFrom=document.getElementById('payFrom'); if(payFrom) payFrom.innerHTML=nonCreditOpts||allOpts;
+  const payTo=document.getElementById('payTo'); if(payTo) payTo.innerHTML=creditOpts||allOpts;
+  const txEl=document.getElementById('expTxList');
+  if(txEl){
+    const txs=[...data.transactions].filter(t=>t.type==='expense'||t.type==='transfer'||t.type==='payment').sort((a,b)=>new Date(b.date)-new Date(a.date));
+    txEl.innerHTML=txs.length?renderGroupedTxs(txs):`<div class="empty-state"><div class="empty-icon">🌹</div><div class="empty-text">还没有支出记录</div></div>`;
+  }
 }
 
 function renderIncomePage() {
-  const incWrap = document.getElementById('incCatWrap');
-  incWrap.innerHTML = data.incCategories.map(c => {
-    const sticker = (data.catStickers||{})['inc_'+c];
-    return `<div class="cat-pill ${ui.currentIncCat === c ? 'active' : ''}" onclick="setIncCat('${c}')" style="padding:${sticker?'5px 10px':'8px 14px'}">
-      ${sticker ? `<img class="cat-pill-sticker" src="${sticker}" alt="${c}" style="width:28px;height:28px;object-fit:contain;display:block;margin:0 auto 2px">` : ''}
-      <span style="font-size:12px">${c}</span>
-    </div>`;
+  const incWrap=document.getElementById('incCatWrap');
+  if(!incWrap) return;
+  incWrap.innerHTML=data.incCategories.map(c=>{
+    const sticker=(data.catStickers||{})['inc_'+c];
+    return`<div class="cat-pill${ui.currentIncCat===c?' active':''}" onclick="setIncCat('${c}')" style="padding:${sticker?'5px 10px':'8px 14px'}">${sticker?`<img src="${sticker}" style="width:28px;height:28px;object-fit:contain;display:block;margin:0 auto 2px">`:''}<span style="font-size:12px">${c}</span></div>`;
   }).join('');
-
-  const accOpts = data.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
-  document.getElementById('incAccount').innerHTML = accOpts;
-
-  const txs = [...data.transactions]
-    .filter(t => t.type === 'income')
-    .sort((a,b) => new Date(b.date) - new Date(a.date));
-  document.getElementById('incTxList').innerHTML =
-    txs.length ? renderGroupedTxs(txs) :
-    `<div class="empty-state"><div class="empty-icon">✨</div><div class="empty-text">还没有收入记录</div></div>`;
-}
-
-function renderAccountsPage() {
-  if (!document.getElementById("accountsFullGrid")) return;
-  const el = document.getElementById('accountsFullGrid');
-  el.innerHTML = data.accounts.map(a => {
-    const b = parseFloat(a.balance);
-    const cls = b > 0 ? 'pos' : (b < 0 ? 'neg' : 'zero');
-    const typeLabel = {cash:'现金',debit:'储蓄卡',credit:'信用卡'}[a.type] || a.type;
-    return `<div class="account-full-card">
-      <div class="acc-full-type">${typeLabel}</div>
-      <div class="acc-full-name">${a.name}</div>
-      <div class="acc-full-balance ${cls}">$${b < 0 ? '-' : ''}${Math.abs(b).toFixed(2)}</div>
-      <div class="acc-edit-btn" onclick="openEditAcc('${a.id}')">编辑余额</div>
-    </div>`;
-  }).join('');
-}
-
-function renderReport() {
-  const now = new Date();
-  let txs, labelText;
-  const period = ui.reportPeriod || 'month';
-  const offset = ui.reportPeriodOffset || 0;
-
-  if (period === 'week') {
-    const ws = new Date(now);
-    ws.setDate(now.getDate() - now.getDay() + offset * 7);
-    ws.setHours(0,0,0,0);
-    const we = new Date(ws); we.setDate(ws.getDate()+6); we.setHours(23,59,59,999);
-    const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    labelText = mo[ws.getMonth()] + ' ' + ws.getDate() + ' - ' + mo[we.getMonth()] + ' ' + we.getDate();
-    txs = data.transactions.filter(function(t) { var d=new Date(t.date); return d>=ws&&d<=we; });
-  } else if (period === 'year') {
-    const y = now.getFullYear() + offset;
-    labelText = y + '年';
-    txs = data.transactions.filter(function(t) { return new Date(t.date).getFullYear()===y; });
-  } else {
-    let m = now.getMonth() + offset;
-    let y = now.getFullYear();
-    while (m < 0) { m += 12; y--; }
-    while (m > 11) { m -= 12; y++; }
-    labelText = y + '年' + (m+1) + '月';
-    txs = data.transactions.filter(function(t) { var d=new Date(t.date); return d.getFullYear()===y&&d.getMonth()===m; });
+  const accOpts=data.accounts.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
+  const incAcc=document.getElementById('incAccount'); if(incAcc) incAcc.innerHTML=accOpts;
+  const txEl=document.getElementById('incTxList');
+  if(txEl){
+    const txs=[...data.transactions].filter(t=>t.type==='income').sort((a,b)=>new Date(b.date)-new Date(a.date));
+    txEl.innerHTML=txs.length?renderGroupedTxs(txs):`<div class="empty-state"><div class="empty-icon">✨</div><div class="empty-text">还没有收入记录</div></div>`;
   }
-
-  const navLabel = document.getElementById('statsNavLabel');
-  if (navLabel) navLabel.textContent = labelText;
-
-  const type = ui.statsType || 'expense';
-  const filteredTxs = txs.filter(function(t) { return t.type === type; });
-  const totalInc = txs.filter(function(t){return t.type==='income';}).reduce(function(s,t){return s+parseFloat(t.amount);},0);
-  const totalExp = txs.filter(function(t){return t.type==='expense';}).reduce(function(s,t){return s+parseFloat(t.amount);},0);
-  const net = totalInc - totalExp;
-
-  const incEl = document.getElementById('statsTotalInc');
-  const expEl = document.getElementById('statsTotalExp');
-  const netEl = document.getElementById('statsTotalNet');
-  if (incEl) incEl.textContent = '+$' + totalInc.toFixed(2);
-  if (expEl) expEl.textContent = '-$' + totalExp.toFixed(2);
-  if (netEl) { netEl.textContent = (net>=0?'+':'-') + '$' + Math.abs(net).toFixed(2); netEl.className = 'stats-summary-value ' + (net>=0?'inc':'exp'); }
-
-  const _builtInIds = EXP_CATEGORIES.map(c=>c.id);
-  const _extraCats = (data.expCategories||[]).filter(c => !_builtInIds.includes(c.id));
-  const allCats = EXP_CATEGORIES.concat(_extraCats);
-  const catMap = {};
-  filteredTxs.forEach(function(t) {
-    const catId = t.category || 'other';
-    if (!catMap[catId]) catMap[catId] = { amount: 0, count: 0, subs: {} };
-    catMap[catId].amount += parseFloat(t.amount);
-    catMap[catId].count++;
-    const note = (t.note||'').trim();
-    if (note) {
-      if (!catMap[catId].subs[note]) catMap[catId].subs[note] = { amount:0, count:0 };
-      catMap[catId].subs[note].amount += parseFloat(t.amount);
-      catMap[catId].subs[note].count++;
-    }
-  });
-
-  const total = Object.values(catMap).reduce(function(s,c){return s+c.amount;}, 0);
-  const COLORS = ['#D25064','#E6BE5A','#8C78B4','#2850A0','#C5A384','#7ec8a0','#E87A90','#6090d0','#b0885a'];
-  const sorted = Object.entries(catMap).sort(function(a,b){return b[1].amount-a[1].amount;});
-
-  // Donut
-  const arcsEl = document.getElementById('donutArcs');
-  const donutAmtEl = document.getElementById('donutAmount');
-  const donutLblEl = document.getElementById('donutLabel');
-  if (donutLblEl) donutLblEl.textContent = type === 'expense' ? '总支出' : '总收入';
-  if (donutAmtEl) donutAmtEl.textContent = total > 0 ? '$' + total.toFixed(0) : '$0';
-
-  const legendEl = document.getElementById('donutLegend');
-
-  if (arcsEl) {
-    if (total === 0 || sorted.length === 0) {
-      arcsEl.innerHTML = '<circle cx="100" cy="100" r="70" fill="none" stroke="rgba(140,120,180,0.15)" stroke-width="32"/>';
-      if (legendEl) legendEl.innerHTML = '';
-    } else {
-      var svgArcs = '';
-      var cumAngle = -Math.PI / 2;
-      sorted.forEach(function(entry, i) {
-        var catId = entry[0], catData = entry[1];
-        var pct = catData.amount / total;
-        var angle = pct * 2 * Math.PI;
-        var color = COLORS[i % COLORS.length];
-        var gap = sorted.length > 1 ? 0.03 : 0;
-        var arcAngle = Math.max(angle - gap, 0.01);
-        var x1 = 100 + 70 * Math.cos(cumAngle + gap/2);
-        var y1 = 100 + 70 * Math.sin(cumAngle + gap/2);
-        var x2 = 100 + 70 * Math.cos(cumAngle + arcAngle + gap/2);
-        var y2 = 100 + 70 * Math.sin(cumAngle + arcAngle + gap/2);
-        var la = arcAngle > Math.PI ? 1 : 0;
-        svgArcs += '<path d="M ' + x1.toFixed(2) + ' ' + y1.toFixed(2) + ' A 70 70 0 ' + la + ' 1 ' + x2.toFixed(2) + ' ' + y2.toFixed(2) + '" fill="none" stroke="' + color + '" stroke-width="32" stroke-linecap="butt"/>';
-        cumAngle += angle;
-      });
-      arcsEl.innerHTML = svgArcs;
-
-      // Render legend
-      if (legendEl) {
-        legendEl.innerHTML = sorted.map(function(entry, i) {
-          var catId = entry[0], catData = entry[1];
-          var cat = allCats.find(function(c){return c.id===catId;}) || { label: catId };
-          var color = COLORS[i % COLORS.length];
-          var pct = total > 0 ? (catData.amount/total*100).toFixed(0) : 0;
-          var stickerSrc = (data.catStickers||{})[catId];
-          return '<div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.06);border-radius:20px;padding:4px 10px 4px 6px">' +
-            '<div style="width:10px;height:10px;border-radius:50%;background:' + color + ';flex-shrink:0"></div>' +
-            '<span style="font-size:12px;color:var(--text2)">' + cat.label + '</span>' +
-            '<span style="font-size:11px;color:var(--text3)">' + pct + '%</span>' +
-            '</div>';
-        }).join('');
-      }
-    }
-  }
-
-  // Category list
-  const listEl = document.getElementById('statsCatList');
-  if (!listEl) return;
-  if (sorted.length === 0) {
-    listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">&#10022;</div><div class="empty-text">该期间没有记录</div></div>';
-    return;
-  }
-
-  listEl.innerHTML = sorted.map(function(entry, i) {
-    var catId = entry[0], catData = entry[1];
-    var cat = Object.assign({}, allCats.find(function(c){return c.id===catId;}) || { label: catId });
-    // Apply override subs
-    if (cat && data.expCatOverrides && data.expCatOverrides[cat.id]) {
-      cat = Object.assign({}, cat, {sub: data.expCatOverrides[cat.id]});
-    }
-    var pct = total > 0 ? (catData.amount/total*100).toFixed(1) : 0;
-    var color = COLORS[i % COLORS.length];
-    var subItems = Object.entries(catData.subs).sort(function(a,b){return b[1].amount-a[1].amount;});
-    var hasExpand = subItems.length > 1;
-    var subHtml = '';
-    if (hasExpand) {
-      subHtml = '<div class="stats-sub-list" id="sub_' + catId + '" style="display:none">' +
-        subItems.map(function(se) {
-          var note = se[0], sd = se[1];
-          return '<div class="stats-sub-item"><div class="stats-sub-name">' + note + '</div><div class="stats-sub-right"><div class="stats-sub-amount">$' + sd.amount.toFixed(2) + '</div><div class="stats-sub-pct">' + (sd.amount/catData.amount*100).toFixed(0) + '% &middot; ' + sd.count + '笔</div></div></div>';
-        }).join('') + '</div>';
-    }
-    return '<div class="stats-cat-item"><div class="stats-cat-header" onclick="' + (hasExpand ? 'toggleStatsSub(' + JSON.stringify(catId) + ')' : '') + '">' +
-      '<div class="stats-cat-dot" style="background:' + color + '"></div>' +
-      '<div class="stats-cat-info">' +
-        '<div class="stats-cat-name">' + cat.label + (hasExpand ? ' <span style="font-size:10px;color:var(--text3)" id="arr_' + catId + '">▸</span>' : '') + '</div>' +
-        '<div class="stats-cat-bar-wrap"><div class="stats-cat-bar" style="width:' + pct + '%;background:' + color + '"></div></div>' +
-      '</div>' +
-      '<div class="stats-cat-right"><div class="stats-cat-amount">$' + catData.amount.toFixed(2) + '</div><div class="stats-cat-count">' + pct + '% &middot; ' + catData.count + '笔</div></div>' +
-    '</div>' + subHtml + '</div>';
-  }).join('');
 }
-
-function toggleStatsSub(catId) {
-  var el = document.getElementById('sub_'+catId);
-  var arr = document.getElementById('arr_'+catId);
-  if (!el) return;
-  var isOpen = el.style.display !== 'none';
-  el.style.display = isOpen ? 'none' : 'block';
-  if (arr) arr.textContent = isOpen ? '▸' : '▾';
-}
-
 
 function renderGroupedTxs(txs) {
-  const groups = {};
-  txs.forEach(t => {
-    const key = t.date.slice(0,10);
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(t);
-  });
-  return Object.entries(groups).map(([date, items]) =>
-    `<div class="date-divider">${formatDate(date)}</div>` +
-    items.map(t => renderTxItem(t)).join('')
-  ).join('');
+  const groups={};
+  txs.forEach(t=>{const key=t.date.slice(0,10);if(!groups[key])groups[key]=[];groups[key].push(t);});
+  return Object.entries(groups).map(([date,items])=>`<div class="date-divider">${formatDate(date)}</div>`+items.map(t=>renderTxItem(t)).join('')).join('');
 }
 
 function renderTxItem(t) {
-  let txIcon = '', label = '', amtCls = 'exp', sign = '-';
-  const allExpCats2 = EXP_CATEGORIES.concat((data.expCategories||[]).filter(c=>!EXP_CATEGORIES.find(b=>b.id===c.id)));
-
-  let stickerSrc = null;
-  if (t.type === 'expense') {
-    const cat = allExpCats2.find(c => c.id === t.category);
-    label = cat ? cat.label : (t.category || '其他');
-    txIcon = label.charAt(0);
-    stickerSrc = (data.catStickers||{})[t.category] || null;
-    amtCls = 'exp'; sign = '-';
-  } else if (t.type === 'income') {
-    txIcon = '＋';
-    label = t.category || '收入';
-    stickerSrc = (data.catStickers||{})['inc_'+t.category] || null;
-    amtCls = 'inc'; sign = '+';
-  } else if (t.type === 'transfer') {
-    txIcon = '⇄'; label = '转账';
-    amtCls = 'trf'; sign = '';
-  } else if (t.type === 'payment') {
-    txIcon = '↩'; label = '还款';
-    amtCls = 'pay'; sign = '';
-  }
-
-  const fromAcc = t.from_account ? data.accounts.find(a=>a.id===t.from_account) : null;
-  const toAcc = t.to_account ? data.accounts.find(a=>a.id===t.to_account) : null;
-  const accName = fromAcc && toAcc ? `${fromAcc.name} → ${toAcc.name}` :
-    (t.account_id ? (data.accounts.find(a=>a.id===t.account_id)||{}).name || '' : '');
-
-  return `<div class="tx-item">
-    <div class="tx-icon" style="background:rgba(140,120,180,0.08);font-family:'EB Garamond',serif;font-size:14px;color:var(--text2);overflow:hidden;padding:${stickerSrc?'2px':'0'}">${stickerSrc ? `<img src="${stickerSrc}" style="width:100%;height:100%;object-fit:contain">` : txIcon}</div>
-    <div class="tx-body">
-      <div class="tx-note">${t.note || label}</div>
-      <div class="tx-meta">${label}${accName ? ' · '+accName : ''}</div>
-    </div>
-    <div class="tx-right">
-      <div class="tx-amount ${amtCls}">${sign}$${parseFloat(t.amount).toFixed(2)}</div>
-    </div>
-    <button class="tx-del" onclick="deleteTx('${t.id}')">×</button>
-  </div>`;
+  const cats=allExpCats();
+  let txIcon='',label='',amtCls='exp',sign='-',stickerSrc=null;
+  if(t.type==='expense'){const cat=cats.find(c=>c.id===t.category);label=cat?cat.label:(t.category||'其他');txIcon=label.charAt(0);stickerSrc=(data.catStickers||{})[t.category]||null;amtCls='exp';sign='-';}
+  else if(t.type==='income'){txIcon='＋';label=t.category||'收入';stickerSrc=(data.catStickers||{})['inc_'+t.category]||null;amtCls='inc';sign='+';}
+  else if(t.type==='transfer'){txIcon='⇄';label='转账';amtCls='trf';sign='';}
+  else if(t.type==='payment'){txIcon='↩';label='还款';amtCls='pay';sign='';}
+  const fromAcc=t.from_account?data.accounts.find(a=>a.id===t.from_account):null;
+  const toAcc=t.to_account?data.accounts.find(a=>a.id===t.to_account):null;
+  const accName=fromAcc&&toAcc?`${fromAcc.name} → ${toAcc.name}`:(t.account_id?(data.accounts.find(a=>a.id===t.account_id)||{}).name||'':'');
+  const amt=parseFloat(t.amount);
+  return`<div class="tx-item"><div class="tx-icon" style="background:rgba(140,120,180,0.08);overflow:hidden;padding:${stickerSrc?'2px':'0'}" onclick="openEditTx('${t.id}')">${stickerSrc?`<img src="${stickerSrc}" style="width:100%;height:100%;object-fit:contain">`:txIcon}</div><div class="tx-body" onclick="openEditTx('${t.id}')" style="cursor:pointer"><div class="tx-note">${t.note||label}</div><div class="tx-meta">${label}${accName?' · '+accName:''}</div></div><div class="tx-right" onclick="openEditTx('${t.id}')" style="cursor:pointer"><div class="tx-amount ${amtCls}">${sign}$${amt.toFixed(2)}</div></div><button class="tx-del" onclick="deleteTx('${t.id}')">×</button></div>`;
 }
 
 // ============================================================
-// ACTIONS
+// ASSETS
 // ============================================================
-function goTo(page) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.main-nav').forEach(b => b.classList.remove('active'));
-  document.getElementById('section-'+page).classList.add('active');
-  document.body.setAttribute('data-page', page);
-  const pages = ['overview','expense','income','assets','calendar','report'];
-  document.querySelectorAll('.main-nav')[pages.indexOf(page)]?.classList.add('active');
+function renderAssets() {
+  if(!document.getElementById('accountsFullGrid')) return;
+  const cashAccs=data.accounts.filter(a=>a.type!=='credit');
+  const creditAccs=data.accounts.filter(a=>a.type==='credit');
+  const totalAssets=cashAccs.filter(a=>a.include_in_net!==false).reduce((s,a)=>s+Math.max(parseFloat(a.balance),0),0);
+  const totalDebts=creditAccs.filter(a=>a.include_in_net!==false).reduce((s,a)=>s+Math.abs(Math.min(parseFloat(a.balance),0)),0);
+  const netWorth=totalAssets-totalDebts;
+  const nwEl=document.getElementById('netWorthAmount');
+  if(nwEl){nwEl.textContent=`${netWorth<0?'-':''}$${Math.abs(netWorth).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;nwEl.className=`net-worth-amount ${netWorth>=0?'positive':'negative'}`;}
+  const taEl=document.getElementById('totalAssets'); if(taEl) taEl.textContent=`$${totalAssets.toLocaleString('en-US',{minimumFractionDigits:2})}`;
+  const tdEl=document.getElementById('totalDebts'); if(tdEl) tdEl.textContent=`$${totalDebts.toLocaleString('en-US',{minimumFractionDigits:2})}`;
 
-  if (page === 'expense') {
-    document.getElementById('expDate').value = today();
-    document.getElementById('trfDate').value = today();
-    document.getElementById('payDate').value = today();
-    ui.currentExpSubCat = '';
-    const sw = document.getElementById('expSubCatWrap');
-    if (sw) sw.style.display = 'none';
-    renderExpensePage();
+  const cashGroup=document.getElementById('assetGroupCash');
+  if(cashGroup){
+    const cashTotal=cashAccs.reduce((s,a)=>s+parseFloat(a.balance),0);
+    cashGroup.innerHTML=`<div class="asset-group-header"><div class="asset-group-name">现金 · 储蓄</div><div class="asset-group-total ${cashTotal>=0?'pos':'neg'}">$${Math.abs(cashTotal).toFixed(2)}</div></div>`+
+    cashAccs.map(a=>{
+      const b=parseFloat(a.balance),cls=b>0?'pos':b<0?'neg':'zero';
+      const typeLabel={cash:'现金',debit:'储蓄卡',savings:'储蓄账户',digital:'数字钱包'}[a.type]||a.type;
+      const inNet=a.include_in_net!==false;
+      return`<div class="asset-row" onclick="openEditAcc('${a.id}')"><div class="asset-row-left"><div class="asset-row-name">${a.name}${!inNet?' <span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:1px 5px;border-radius:4px">不计入</span>':''}</div><div class="asset-row-type">${typeLabel}</div></div><div class="asset-row-balance ${cls}">$${b<0?'-':''}${Math.abs(b).toLocaleString('en-US',{minimumFractionDigits:2})}</div></div>`;
+    }).join('');
   }
-  if (page === 'income') {
-    document.getElementById('incDate').value = today();
-    renderIncomePage();
+
+  const creditGroup=document.getElementById('assetGroupCredit');
+  if(creditGroup){
+    if(creditAccs.length===0){creditGroup.style.display='none';}
+    else{
+      creditGroup.style.display='';
+      const creditOwed=creditAccs.filter(a=>a.include_in_net!==false).reduce((s,a)=>s+Math.abs(Math.min(parseFloat(a.balance),0)),0);
+      creditGroup.innerHTML=`<div class="asset-group-header"><div class="asset-group-name">信用卡 (${creditAccs.length})</div><div class="asset-group-total neg">欠款: $${creditOwed.toFixed(2)}</div></div>`+
+      creditAccs.map(a=>{
+        const b=parseFloat(a.balance),owed=Math.abs(Math.min(b,0));
+        const limit=parseFloat(a.credit_limit)||0,avail=limit>0?Math.max(limit-owed,0):null;
+        const usedPct=limit>0?Math.min(owed/limit*100,100):0;
+        const barCol=usedPct<50?'#7ec8a0':usedPct<80?'#E6BE5A':'#D25064';
+        const inNet=a.include_in_net!==false;
+        return`<div class="asset-row" style="flex-direction:column;align-items:stretch;gap:8px" onclick="openEditAcc('${a.id}')"><div style="display:flex;align-items:center;justify-content:space-between"><div><div class="asset-row-name">${a.name}${!inNet?' <span style="font-size:10px;color:var(--text3)">不计入</span>':''}</div><div class="asset-row-type">信用卡</div></div><div style="text-align:right"><div style="font-family:\'EB Garamond\',serif;font-size:18px;color:#D25064">-$${owed.toFixed(2)}</div>${limit>0?`<div style="font-size:11px;color:#3a7850;margin-top:1px">可用额度: $${avail.toFixed(2)}</div>`:'<div style="font-size:11px;color:var(--text3)">点击设置额度</div>'}</div></div>${limit>0?`<div><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px"><span>已用 $${owed.toFixed(2)} / 总额度 $${limit.toFixed(0)}</span><span>${usedPct.toFixed(0)}%</span></div><div style="height:4px;background:rgba(140,120,180,0.1);border-radius:2px;overflow:hidden"><div style="height:4px;border-radius:2px;background:${barCol};width:${usedPct}%"></div></div></div>`:''}</div>`;
+      }).join('');
+    }
   }
-  if (page === 'report') { ui.statsType = ui.statsType||'expense'; setReportPeriod(ui.reportPeriod||'month'); }
-  if (page === 'overview') renderOverview();
-  if (page === 'calendar') renderCalendarPage();
-  if (page === 'assets') renderAssets();
+
+  // Budgets
+  const budgetGroup=document.getElementById('assetBudgetGroup');
+  if(budgetGroup){
+    const weekStart=getWeekStart();
+    budgetGroup.innerHTML=data.budgets.map(b=>{
+      const spent=data.transactions.filter(t=>t.type==='expense'&&t.budget_id===b.id&&new Date(t.date)>=weekStart).reduce((s,t)=>s+parseFloat(t.amount),0);
+      const pct=Math.min(spent/b.amount*100,100),barCol=pct<70?'#7ec8a0':pct<100?'#E6BE5A':'#D25064';
+      return`<div class="asset-row"><div class="asset-row-left"><div class="asset-row-name">${b.name}</div><div class="asset-row-type">每周 $${b.amount} · 已用 $${spent.toFixed(0)}</div><div style="margin-top:5px;height:3px;background:rgba(140,120,180,0.1);border-radius:2px;width:140px"><div style="height:3px;border-radius:2px;background:${barCol};width:${pct}%"></div></div></div><div style="font-family:\'EB Garamond\',serif;font-size:16px;color:${pct>=1?'#D25064':'var(--text)'}">$${(b.amount-spent).toFixed(0)}</div></div>`;
+    }).join('')||'<div style="padding:14px;color:var(--text3);font-size:13px;text-align:center">还没有预算</div>';
+  }
+
+  // Balance history
+  const histEl=document.getElementById('balanceHistoryList');
+  if(histEl){
+    const hist=[...(data.balanceHistory||[])].reverse().slice(0,20);
+    if(hist.length===0){histEl.innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px;font-style:italic">还没有余额更新记录</div>';}
+    else{histEl.innerHTML=hist.map(h=>{
+      const d=new Date(h.date),dateStr=`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      const diff=parseFloat(h.new_balance)-parseFloat(h.old_balance),diffStr=(diff>=0?'+':'-')+'$'+Math.abs(diff).toFixed(2);
+      const diffCol=diff>0?'#7ec8a0':diff<0?'#D25064':'var(--text3)';
+      return`<div class="bal-history-item"><div class="bal-history-left"><div class="bal-history-acc">${h.account_name}</div><div class="bal-history-date">${dateStr}${h.note?' · '+h.note:''}</div></div><div class="bal-history-right"><div class="bal-history-new">$${Math.abs(parseFloat(h.new_balance)).toFixed(2)}</div><div class="bal-history-old" style="color:${diffCol}">${diffStr}</div></div></div>`;
+    }).join('');}
+  }
 }
 
+// ============================================================
+// ACTIONS - EXPENSE
+// ============================================================
 function setExpType(type) {
-  ui.currentExpType = type;
-  document.querySelectorAll('.type-pill').forEach(p => p.classList.remove('active'));
-  document.querySelector(`.type-pill.${type}`).classList.add('active');
-  document.getElementById('expenseFields').style.display = type === 'expense' ? '' : 'none';
-  document.getElementById('transferFields').style.display = type === 'transfer' ? '' : 'none';
-  document.getElementById('paymentFields').style.display = type === 'payment' ? '' : 'none';
+  ui.currentExpType=type;
+  document.querySelectorAll('.type-pill').forEach(p=>p.classList.remove('active'));
+  const btn=document.querySelector(`.type-pill.${type}`); if(btn) btn.classList.add('active');
+  document.getElementById('expenseFields').style.display=type==='expense'?'':'none';
+  document.getElementById('transferFields').style.display=type==='transfer'?'':'none';
+  document.getElementById('paymentFields').style.display=type==='payment'?'':'none';
 }
 
 function setExpCat(catId) {
-  ui.currentExpCat = catId;
-  ui.currentExpSubCat = '';
-  // Update active pill
-  const builtInIds = EXP_CATEGORIES.map(c=>c.id);
-  const extraCats = (data.expCategories||[]).filter(c=>!builtInIds.includes(c.id));
-  const allCats = EXP_CATEGORIES.concat(extraCats);
-  const cat = allCats.find(c=>c.id===catId);
-  document.querySelectorAll('#expCatWrap .cat-pill').forEach(p => {
-    p.classList.toggle('active', cat && p.textContent.trim().replace(/^[^\w一-龥]+/,'').includes(cat.label));
-  });
-  // Show subcategories
-  const subWrap = document.getElementById('expSubCatWrap');
-  const subPills = document.getElementById('expSubCatPills');
-  if (!subWrap || !subPills) return;
-  // Use override subs if available
-  const override = (data.expCatOverrides||{})[catId];
-  const subs = override !== undefined ? override : (cat && cat.sub ? cat.sub : []);
-  if (subs.length === 0) {
-    subWrap.style.display = 'none';
-    subPills.innerHTML = '';
-  } else {
-    subWrap.style.display = 'block';
-    subPills.innerHTML = subs.map(s =>
-      '<div class="cat-pill" onclick="setExpSubCat(' + JSON.stringify(s) + ')">' + s + '</div>'
-    ).join('');
-  }
+  ui.currentExpCat=catId; ui.currentExpSubCat='';
+  const cats=allExpCats(),cat=cats.find(c=>c.id===catId);
+  document.querySelectorAll('#expCatWrap .cat-pill').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('#expCatWrap .cat-pill').forEach(p=>{if(cat&&p.querySelector('span')&&p.querySelector('span').textContent.trim()===cat.label)p.classList.add('active');});
+  const subWrap=document.getElementById('expSubCatWrap'),subPills=document.getElementById('expSubCatPills');
+  if(!subWrap||!subPills)return;
+  const override=(data.expCatOverrides||{})[catId];
+  const subs=override!==undefined?override:(cat&&cat.sub?cat.sub:[]);
+  if(subs.length===0){subWrap.style.display='none';subPills.innerHTML='';}
+  else{subWrap.style.display='block';subPills.innerHTML=subs.map(s=>`<div class="cat-pill" onclick="setExpSubCat(${JSON.stringify(s)})">${s}</div>`).join('');}
 }
 
 function setExpSubCat(sub) {
-  ui.currentExpSubCat = sub;
-  document.querySelectorAll('#expSubCatPills .cat-pill').forEach(p => {
-    p.classList.toggle('active', p.textContent.trim() === sub);
-  });
-  // Auto-fill note if empty
-  const noteEl = document.getElementById('expNote');
-  if (noteEl && !noteEl.value) noteEl.value = sub;
+  ui.currentExpSubCat=sub;
+  document.querySelectorAll('#expSubCatPills .cat-pill').forEach(p=>p.classList.toggle('active',p.textContent.trim()===sub));
+  const noteEl=document.getElementById('expNote'); if(noteEl&&!noteEl.value)noteEl.value=sub;
 }
 
 function setIncCat(cat) {
-  ui.currentIncCat = cat;
-  document.querySelectorAll('#incCatWrap .cat-pill').forEach(p => {
-    p.classList.toggle('active', p.textContent.trim() === cat);
-  });
+  ui.currentIncCat=cat;
+  document.querySelectorAll('#incCatWrap .cat-pill').forEach(p=>p.classList.toggle('active',p.querySelector('span')&&p.querySelector('span').textContent.trim()===cat));
 }
 
 function submitExpense() {
-  const type = ui.currentExpType;
-
-  if (type === 'expense') {
-    const amount = parseFloat(document.getElementById('expAmount').value);
-    if (!amount || amount <= 0) { showToast('请输入金额'); return; }
-    const accId = document.getElementById('expAccount').value;
-    const acc = data.accounts.find(a => a.id === accId);
-
-    const tx = {
-      id: uid(), type: 'expense', amount,
-      category: ui.currentExpCat,
-      account_id: accId,
-      note: document.getElementById('expNote').value.trim() || ui.currentExpSubCat || '',
-      date: document.getElementById('expDate').value || today(),
-      budget_id: getBudgetIdForCat(ui.currentExpCat),
-    };
-    data.transactions.push(tx);
-    saveTx(tx);
-    if (acc) {
-      // For credit cards, spending increases the balance owed (shown as negative)
-      if (acc.type === 'credit') acc.balance = (parseFloat(acc.balance) - amount).toFixed(2);
-      else acc.balance = (parseFloat(acc.balance) - amount).toFixed(2);
-    }
-    document.getElementById('expAmount').value = '';
-    document.getElementById('expNote').value = '';
-
-  } else if (type === 'transfer') {
-    const amount = parseFloat(document.getElementById('trfAmount').value);
-    if (!amount || amount <= 0) { showToast('请输入金额'); return; }
-    const fromId = document.getElementById('trfFrom').value;
-    const toId = document.getElementById('trfTo').value;
-    if (fromId === toId) { showToast('转出和转入不能是同一账户'); return; }
-
-    const fromAcc = data.accounts.find(a=>a.id===fromId);
-    const toAcc = data.accounts.find(a=>a.id===toId);
-
-    const trfTx = {
-      id: uid(), type: 'transfer', amount,
-      from_account: fromId, to_account: toId,
-      note: document.getElementById('trfNote').value.trim() || '转账',
-      date: document.getElementById('trfDate').value || today(),
-    };
-    data.transactions.push(trfTx);
-    saveTx(trfTx);
-    if (fromAcc) fromAcc.balance = (parseFloat(fromAcc.balance) - amount).toFixed(2);
-    if (toAcc) toAcc.balance = (parseFloat(toAcc.balance) + amount).toFixed(2);
-    document.getElementById('trfAmount').value = '';
-    document.getElementById('trfNote').value = '';
-
-  } else if (type === 'payment') {
-    const amount = parseFloat(document.getElementById('payAmount').value);
-    if (!amount || amount <= 0) { showToast('请输入还款金额'); return; }
-    const fromId = document.getElementById('payFrom').value;
-    const toId = document.getElementById('payTo').value;
-
-    const fromAcc = data.accounts.find(a=>a.id===fromId);
-    const toAcc = data.accounts.find(a=>a.id===toId);
-
-    const payTx = {
-      id: uid(), type: 'payment', amount,
-      from_account: fromId, to_account: toId,
-      note: document.getElementById('payNote').value.trim() || `还款 · ${toAcc?.name || ''}`,
-      date: document.getElementById('payDate').value || today(),
-    };
-    data.transactions.push(payTx);
-    saveTx(payTx);
-    if (fromAcc) fromAcc.balance = (parseFloat(fromAcc.balance) - amount).toFixed(2);
-    if (toAcc) toAcc.balance = (parseFloat(toAcc.balance) + amount).toFixed(2); // credit balance improves
-    document.getElementById('payAmount').value = '';
-    document.getElementById('payNote').value = '';
+  const type=ui.currentExpType;
+  if(type==='expense'){
+    const amount=parseFloat(document.getElementById('expAmount').value);
+    if(!amount||amount<=0){showToast('请输入金额');return;}
+    const accId=document.getElementById('expAccount').value;
+    const acc=data.accounts.find(a=>a.id===accId);
+    const tx={id:uid(),type:'expense',amount,category:ui.currentExpCat,account_id:accId,note:document.getElementById('expNote').value.trim()||ui.currentExpSubCat||'',date:document.getElementById('expDate').value||today(),budget_id:getBudgetIdForCat(ui.currentExpCat)};
+    data.transactions.push(tx); saveTx(tx);
+    if(acc){if(acc.type==='credit')acc.balance=(parseFloat(acc.balance)-amount).toFixed(2);else acc.balance=(parseFloat(acc.balance)-amount).toFixed(2);}
+    document.getElementById('expAmount').value=''; document.getElementById('expNote').value='';
+  } else if(type==='transfer'){
+    const amount=parseFloat(document.getElementById('trfAmount').value);
+    if(!amount||amount<=0){showToast('请输入金额');return;}
+    const fromId=document.getElementById('trfFrom').value,toId=document.getElementById('trfTo').value;
+    if(fromId===toId){showToast('转出和转入不能相同');return;}
+    const fromAcc=data.accounts.find(a=>a.id===fromId),toAcc=data.accounts.find(a=>a.id===toId);
+    const tx={id:uid(),type:'transfer',amount,from_account:fromId,to_account:toId,note:document.getElementById('trfNote').value.trim()||'转账',date:document.getElementById('trfDate').value||today()};
+    data.transactions.push(tx); saveTx(tx);
+    if(fromAcc)fromAcc.balance=(parseFloat(fromAcc.balance)-amount).toFixed(2);
+    if(toAcc)toAcc.balance=(parseFloat(toAcc.balance)+amount).toFixed(2);
+    document.getElementById('trfAmount').value=''; document.getElementById('trfNote').value='';
+  } else if(type==='payment'){
+    const amount=parseFloat(document.getElementById('payAmount').value);
+    if(!amount||amount<=0){showToast('请输入金额');return;}
+    const fromId=document.getElementById('payFrom').value,toId=document.getElementById('payTo').value;
+    const fromAcc=data.accounts.find(a=>a.id===fromId),toAcc=data.accounts.find(a=>a.id===toId);
+    const tx={id:uid(),type:'payment',amount,from_account:fromId,to_account:toId,note:document.getElementById('payNote').value.trim()||`还款 · ${toAcc?.name||''}`,date:document.getElementById('payDate').value||today()};
+    data.transactions.push(tx); saveTx(tx);
+    if(fromAcc)fromAcc.balance=(parseFloat(fromAcc.balance)-amount).toFixed(2);
+    if(toAcc)toAcc.balance=(parseFloat(toAcc.balance)+amount).toFixed(2);
+    document.getElementById('payAmount').value=''; document.getElementById('payNote').value='';
   }
-
-  save();
-  render();
-  showToast('✦ 已记录');
+  save(); render(); goTo('records'); showToast('✦ 已记录');
 }
 
 function submitIncome() {
-  const amount = parseFloat(document.getElementById('incAmount').value);
-  if (!amount || amount <= 0) { showToast('请输入金额'); return; }
-  if (!ui.currentIncCat) { showToast('请选择分类'); return; }
-
-  const accId = document.getElementById('incAccount').value;
-  const acc = data.accounts.find(a=>a.id===accId);
-
-  const incTx = {
-    id: uid(), type: 'income', amount,
-    category: ui.currentIncCat,
-    account_id: accId,
-    note: document.getElementById('incNote').value.trim(),
-    date: document.getElementById('incDate').value || today(),
-  };
-  data.transactions.push(incTx);
-  saveTx(incTx);
-  if (acc) acc.balance = (parseFloat(acc.balance) + amount).toFixed(2);
-
-  document.getElementById('incAmount').value = '';
-  document.getElementById('incNote').value = '';
-  save();
-  render();
-  showToast('✦ 已记录');
+  const amount=parseFloat(document.getElementById('incAmount').value);
+  if(!amount||amount<=0){showToast('请输入金额');return;}
+  if(!ui.currentIncCat){showToast('请选择分类');return;}
+  const accId=document.getElementById('incAccount').value,acc=data.accounts.find(a=>a.id===accId);
+  const tx={id:uid(),type:'income',amount,category:ui.currentIncCat,account_id:accId,note:document.getElementById('incNote').value.trim(),date:document.getElementById('incDate').value||today()};
+  data.transactions.push(tx); saveTx(tx);
+  if(acc)acc.balance=(parseFloat(acc.balance)+amount).toFixed(2);
+  document.getElementById('incAmount').value=''; document.getElementById('incNote').value='';
+  save(); render(); showToast('✦ 已记录');
 }
 
 function deleteTx(id) {
-  const tx = data.transactions.find(t=>t.id===id);
-  if (!tx) return;
-
-  // Reverse balance
-  if (tx.type === 'expense') {
-    const acc = data.accounts.find(a=>a.id===tx.account_id);
-    if (acc) acc.balance = (parseFloat(acc.balance) + tx.amount).toFixed(2);
-  } else if (tx.type === 'income') {
-    const acc = data.accounts.find(a=>a.id===tx.account_id);
-    if (acc) acc.balance = (parseFloat(acc.balance) - tx.amount).toFixed(2);
-  } else if (tx.type === 'transfer' || tx.type === 'payment') {
-    const from = data.accounts.find(a=>a.id===tx.from_account);
-    const to = data.accounts.find(a=>a.id===tx.to_account);
-    if (from) from.balance = (parseFloat(from.balance) + tx.amount).toFixed(2);
-    if (to) to.balance = (parseFloat(to.balance) - tx.amount).toFixed(2);
-  }
-
-  data.transactions = data.transactions.filter(t=>t.id!==id);
-  deleteTxRemote(id);
-  save();
-  render();
-  showToast('已删除');
+  const tx=data.transactions.find(t=>t.id===id); if(!tx)return;
+  if(tx.type==='expense'||tx.type==='income'){const acc=data.accounts.find(a=>a.id===tx.account_id);if(acc){if(tx.type==='expense')acc.balance=(parseFloat(acc.balance)+parseFloat(tx.amount)).toFixed(2);else acc.balance=(parseFloat(acc.balance)-parseFloat(tx.amount)).toFixed(2);}}
+  else if(tx.type==='transfer'||tx.type==='payment'){const from=data.accounts.find(a=>a.id===tx.from_account),to=data.accounts.find(a=>a.id===tx.to_account);if(from)from.balance=(parseFloat(from.balance)+parseFloat(tx.amount)).toFixed(2);if(to)to.balance=(parseFloat(to.balance)-parseFloat(tx.amount)).toFixed(2);}
+  data.transactions=data.transactions.filter(t=>t.id!==id);
+  deleteTxRemote(id); save(); render(); showToast('已删除');
 }
 
 function getBudgetIdForCat(catId) {
-  if (catId === 'groceries') return 'family_groceries';
-  const allCats = [...EXP_CATEGORIES, ...(data.expCategories||[])];
-  const cat = allCats.find(c=>c.id===catId);
-  if (cat && cat.label.includes('买菜')) return 'family_groceries';
-  return 'personal';
+  if(catId==='groceries')return'family_groceries';
+  const cat=allExpCats().find(c=>c.id===catId);
+  if(cat&&cat.label.includes('买菜'))return'family_groceries';
+  return'personal';
 }
 
+// ============================================================
 // ACCOUNTS
+// ============================================================
 function openEditAcc(id) {
-  const acc = data.accounts.find(a=>a.id===id);
-  if (!acc) return;
-  document.getElementById('editAccId').value = id;
-  document.getElementById('editAccName').textContent = acc.name;
-
-  const isCredit = acc.type === 'credit';
-  const limitGroup = document.getElementById('editAccLimitGroup');
-  const owedGroup = document.getElementById('editAccOwedGroup');
-  const balLabel = document.getElementById('editAccBalLabel');
-
-  if (isCredit) {
-    limitGroup.style.display = 'block';
-    owedGroup.style.display = 'block';
-    balLabel.textContent = '当前欠款';
-    document.getElementById('editAccLimit').value = acc.credit_limit || 0;
-    const owed = Math.abs(parseFloat(acc.balance) || 0);
-    const limit = parseFloat(acc.credit_limit) || 0;
-    document.getElementById('editAccOwed').textContent = '$' + owed.toFixed(2);
-    document.getElementById('editAccAvail').textContent = '$' + Math.max(limit - owed, 0).toFixed(2);
-    document.getElementById('editAccBal').value = owed;
-    // Update owed display on input
-    document.getElementById('editAccBal').oninput = function() {
-      const v = parseFloat(this.value)||0;
-      const lim = parseFloat(document.getElementById('editAccLimit').value)||0;
-      document.getElementById('editAccOwed').textContent = '$'+v.toFixed(2);
-      document.getElementById('editAccAvail').textContent = '$'+Math.max(lim-v,0).toFixed(2);
-    };
-    document.getElementById('editAccLimit').oninput = function() {
-      const v = parseFloat(document.getElementById('editAccBal').value)||0;
-      const lim = parseFloat(this.value)||0;
-      document.getElementById('editAccAvail').textContent = '$'+Math.max(lim-v,0).toFixed(2);
-    };
+  const acc=data.accounts.find(a=>a.id===id); if(!acc)return;
+  document.getElementById('editAccId').value=id;
+  document.getElementById('editAccName').textContent=acc.name;
+  const isCredit=acc.type==='credit';
+  const limitGroup=document.getElementById('editAccLimitGroup');
+  const owedGroup=document.getElementById('editAccOwedGroup');
+  const balLabel=document.getElementById('editAccBalLabel');
+  if(isCredit){
+    if(limitGroup)limitGroup.style.display='block';
+    if(owedGroup)owedGroup.style.display='block';
+    if(balLabel)balLabel.textContent='当前欠款';
+    const limitEl=document.getElementById('editAccLimit'); if(limitEl)limitEl.value=acc.credit_limit||0;
+    const owed=Math.abs(parseFloat(acc.balance)||0),limit=parseFloat(acc.credit_limit)||0;
+    const owedEl=document.getElementById('editAccOwed'); if(owedEl)owedEl.textContent='$'+owed.toFixed(2);
+    const availEl=document.getElementById('editAccAvail'); if(availEl)availEl.textContent='$'+Math.max(limit-owed,0).toFixed(2);
+    document.getElementById('editAccBal').value=owed;
+    document.getElementById('editAccBal').oninput=function(){const v=parseFloat(this.value)||0,lim=parseFloat(document.getElementById('editAccLimit').value)||0;if(owedEl)owedEl.textContent='$'+v.toFixed(2);if(availEl)availEl.textContent='$'+Math.max(lim-v,0).toFixed(2);};
+    const limitInput=document.getElementById('editAccLimit');
+    if(limitInput)limitInput.oninput=function(){const v=parseFloat(document.getElementById('editAccBal').value)||0,lim=parseFloat(this.value)||0;if(availEl)availEl.textContent='$'+Math.max(lim-v,0).toFixed(2);};
   } else {
-    limitGroup.style.display = 'none';
-    owedGroup.style.display = 'none';
-    balLabel.textContent = '当前余额';
-    document.getElementById('editAccBal').value = acc.balance;
-    document.getElementById('editAccBal').oninput = null;
+    if(limitGroup)limitGroup.style.display='none';
+    if(owedGroup)owedGroup.style.display='none';
+    if(balLabel)balLabel.textContent='当前余额';
+    document.getElementById('editAccBal').value=acc.balance;
+    document.getElementById('editAccBal').oninput=null;
   }
-  // Set include_in_net toggle
-  const includeNet = acc.include_in_net !== false;
-  const toggle = document.getElementById('editAccNetToggle');
-  const dot = document.getElementById('editAccNetDot');
-  if (toggle && dot) {
-    toggle.style.background = includeNet ? '#8C78B4' : '#ccc';
-    dot.style.transform = includeNet ? 'translateX(20px)' : 'translateX(0)';
-  }
-  openModal('editAccModal');
+  const includeNet=acc.include_in_net!==false;
+  const toggle=document.getElementById('editAccNetToggle'),dot=document.getElementById('editAccNetDot');
+  if(toggle&&dot){toggle.style.background=includeNet?'#8C78B4':'#ccc';dot.style.transform=includeNet?'translateX(20px)':'translateX(0)';}
+  document.getElementById('editAccModal').classList.add('open');
 }
 
 function toggleNetToggle() {
-  const toggle = document.getElementById('editAccNetToggle');
-  const dot = document.getElementById('editAccNetDot');
-  const isOn = toggle.style.background === 'rgb(140, 120, 180)';
-  toggle.style.background = isOn ? '#ccc' : '#8C78B4';
-  dot.style.transform = isOn ? 'translateX(0)' : 'translateX(20px)';
+  const toggle=document.getElementById('editAccNetToggle'),dot=document.getElementById('editAccNetDot');
+  const isOn=toggle.style.background==='rgb(140, 120, 180)';
+  toggle.style.background=isOn?'#ccc':'#8C78B4';
+  dot.style.transform=isOn?'translateX(0)':'translateX(20px)';
 }
 
 function saveAccBalance() {
-  const id = document.getElementById('editAccId').value;
-  const acc = data.accounts.find(a=>a.id===id);
-  if (!acc) return;
-  const oldBal = parseFloat(acc.balance);
-  let newBal = parseFloat(document.getElementById('editAccBal').value) || 0;
-  if (acc.type === 'credit') {
-    // Save credit limit
-    const limit = parseFloat(document.getElementById('editAccLimit').value) || 0;
-    acc.credit_limit = limit;
-    // Store balance as negative (owed amount)
-    newBal = -Math.abs(newBal);
-  }
-  acc.balance = newBal;
-  // Record balance history
-  data.balanceHistory.push({
-    id: uid(),
-    account_id: id,
-    account_name: acc.name,
-    old_balance: oldBal,
-    new_balance: newBal,
-    date: new Date().toISOString(),
-    note: document.getElementById('editAccNote') ? document.getElementById('editAccNote').value.trim() : '',
-  });
-  // Save include_in_net
-  const toggle = document.getElementById('editAccNetToggle');
-  acc.include_in_net = toggle ? toggle.style.background === 'rgb(140, 120, 180)' : true;
-  save();
-  closeModal('editAccModal');
-  renderAssets();
-  renderOverview();
-  showToast('余额已更新');
+  const id=document.getElementById('editAccId').value;
+  const acc=data.accounts.find(a=>a.id===id); if(!acc)return;
+  const oldBal=parseFloat(acc.balance);
+  let newBal=parseFloat(document.getElementById('editAccBal').value)||0;
+  if(acc.type==='credit'){const limit=parseFloat(document.getElementById('editAccLimit').value)||0;acc.credit_limit=limit;newBal=-Math.abs(newBal);}
+  acc.balance=newBal;
+  const toggle=document.getElementById('editAccNetToggle');
+  acc.include_in_net=toggle?toggle.style.background==='rgb(140, 120, 180)':true;
+  data.balanceHistory.push({id:uid(),account_id:id,account_name:acc.name,old_balance:oldBal,new_balance:newBal,date:new Date().toISOString(),note:document.getElementById('editAccNote')?document.getElementById('editAccNote').value.trim():''});
+  save(); closeModal('editAccModal'); renderAssets(); renderOverview(); showToast('余额已更新');
 }
 
+function addNewAccount() {
+  const name=document.getElementById('newAccName2').value.trim(); if(!name){showToast('请输入账户名称');return;}
+  const type=document.getElementById('newAccType2').value;
+  let bal=parseFloat(document.getElementById('newAccBal2').value)||0;
+  const limit=parseFloat(document.getElementById('newAccLimit')?.value)||0;
+  if(type==='credit')bal=-Math.abs(bal);
+  data.accounts.push({id:uid(),name,type,balance:bal,credit_limit:limit});
+  save(); closeModal('newAccountModal');
+  document.getElementById('newAccName2').value=''; document.getElementById('newAccBal2').value='';
+  renderAssets(); renderOverview(); showToast('账户已添加');
+}
+
+// ============================================================
 // BUDGETS
+// ============================================================
 function openBudgetModal() {
-  renderBudgetFormFields();
+  const el=document.getElementById('budgetFormFields');
+  if(!el)return;
+  el.innerHTML=data.budgets.map(b=>`<div style="margin-bottom:16px"><label class="form-label">${b.name}（每周）</label><div class="amount-wrap"><span class="amount-symbol">$</span><input class="form-input" type="number" id="bgt_${b.id}" value="${b.amount}" inputmode="decimal"></div></div>`).join('');
   document.getElementById('editBudgetModal').classList.add('open');
 }
 
-function renderBudgetFormFields() {
-  const el = document.getElementById('budgetFormFields');
-  if (data.budgets.length === 0) {
-    el.innerHTML = `<div class="empty-text" style="padding:12px;text-align:center;color:var(--text3)">还没有预算项目</div>`;
-    return;
-  }
-  el.innerHTML = data.budgets.map(b => `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-      <div style="flex:1;font-size:13px;color:var(--text2)">${b.name}</div>
-      <div class="amount-wrap" style="width:110px">
-        <span class="amount-symbol">$</span>
-        <input class="form-input" type="number" id="bgt_${b.id}" value="${b.amount}" inputmode="decimal" style="padding-left:28px;font-size:15px">
-      </div>
-      <button onclick="deleteBudgetItem('${b.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:20px;padding:0 4px;line-height:1;flex-shrink:0">×</button>
-    </div>
-  `).join('');
+function addBudgetItem() {
+  const name=document.getElementById('newBudgetName').value.trim();
+  const amount=parseFloat(document.getElementById('newBudgetAmount').value);
+  if(!name){showToast('请输入预算名称');return;}
+  if(!amount||amount<=0){showToast('请输入金额');return;}
+  data.budgets.push({id:uid(),name,amount,period:'weekly'});
+  document.getElementById('newBudgetName').value=''; document.getElementById('newBudgetAmount').value='';
+  save(); renderBudgetFormFields(); showToast('预算已添加');
 }
 
-function addBudgetItem() {
-  const name = document.getElementById('newBudgetName').value.trim();
-  const amount = parseFloat(document.getElementById('newBudgetAmount').value);
-  if (!name) { showToast('请输入预算名称'); return; }
-  if (!amount || amount <= 0) { showToast('请输入金额'); return; }
-  data.budgets.push({ id: uid(), name, amount, period: 'weekly' });
-  document.getElementById('newBudgetName').value = '';
-  document.getElementById('newBudgetAmount').value = '';
-  save();
-  renderBudgetFormFields();
-  showToast('预算已添加');
+function renderBudgetFormFields() {
+  const el=document.getElementById('budgetFormFields'); if(!el)return;
+  el.innerHTML=data.budgets.map(b=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><div style="flex:1;font-size:13px;color:var(--text2)">${b.name}</div><div class="amount-wrap" style="width:110px"><span class="amount-symbol">$</span><input class="form-input" type="number" id="bgt_${b.id}" value="${b.amount}" inputmode="decimal" style="padding-left:28px;font-size:15px"></div><button onclick="deleteBudgetItem('${b.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:20px;padding:0 4px;flex-shrink:0">×</button></div>`).join('');
 }
 
 function deleteBudgetItem(id) {
-  data.budgets = data.budgets.filter(b => b.id !== id);
-  save();
-  renderBudgetFormFields();
-  renderOverview();
-  showToast('已删除');
+  data.budgets=data.budgets.filter(b=>b.id!==id); save(); renderBudgetFormFields(); renderOverview(); showToast('已删除');
 }
 
 function saveBudgets() {
-  data.budgets.forEach(b => {
-    const val = parseFloat(document.getElementById('bgt_'+b.id)?.value);
-    if (val > 0) b.amount = val;
-  });
-  save();
-  closeModal('editBudgetModal');
-  renderOverview();
-  showToast('预算已保存');
+  data.budgets.forEach(b=>{const val=parseFloat(document.getElementById('bgt_'+b.id)?.value);if(val>0)b.amount=val;});
+  save(); closeModal('editBudgetModal'); renderOverview(); showToast('预算已保存');
 }
 
-// INCOME CATEGORIES
+// ============================================================
+// CATEGORIES
+// ============================================================
+function addExpCat() {
+  const name=document.getElementById('newExpCatName').value.trim(); if(!name){showToast('请输入分类名称');return;}
+  const subRaw=document.getElementById('newExpCatSub').value.trim();
+  const sub=subRaw?subRaw.split(/[,，]/).map(s=>s.trim()).filter(Boolean):[];
+  const id=name.toLowerCase().replace(/\s+/g,'_')+'_'+Date.now().toString(36);
+  if(!data.expCategories)data.expCategories=[];
+  data.expCategories.push({id,label:name,sub});
+  save(); document.getElementById('newExpCatName').value=''; document.getElementById('newExpCatSub').value='';
+  renderExpCatModalList(); renderExpensePage(); showToast('分类已添加');
+}
+
+function deleteExpCat(id) {
+  data.expCategories=(data.expCategories||[]).filter(c=>c.id!==id);
+  save(); renderAssets(); renderExpensePage(); showToast('已删除');
+}
+
+function renderExpCatModalList() {
+  const el=document.getElementById('expCatModalList'); if(!el)return;
+  const builtInHtml=EXP_CATEGORIES.map(c=>{
+    const override=(data.expCatOverrides||{})[c.id];
+    const subs=override!==undefined?override:(c.sub||[]);
+    const stickerSrc=(data.catStickers||{})[c.id];
+    return`<div style="padding:10px 0;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="display:flex;align-items:center;gap:8px"><div onclick="openStickerPicker('${c.id}', renderExpCatModalList)" style="width:40px;height:40px;border-radius:10px;border:1px dashed rgba(140,120,180,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">${stickerSrc?`<img src="${stickerSrc}" style="width:36px;height:36px;object-fit:contain">`:'<span style="font-size:18px;color:var(--text3)">+</span>'}</div><div style="font-size:14px;color:var(--text);font-weight:500">${c.label}</div></div><span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:2px 6px;border-radius:4px">内置</span></div><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">${subs.map(s=>`<span style="background:rgba(140,120,180,0.1);border:1px solid rgba(140,120,180,0.2);border-radius:12px;padding:3px 10px;font-size:12px;color:var(--text2);display:inline-flex;align-items:center;gap:4px">${s}<button onclick="removeBuiltInSub('${c.id}','${s}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0;line-height:1">×</button></span>`).join('')}<button onclick="addBuiltInSub('${c.id}')" style="background:rgba(140,120,180,0.08);border:1px dashed rgba(140,120,180,0.3);border-radius:12px;padding:3px 10px;font-size:12px;color:#8C78B4;cursor:pointer">+ 添加</button></div></div>`;
+  }).join('');
+  const customHtml=(data.expCategories||[]).length>0?'<div style="font-size:11px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;padding:10px 0 6px">自定义分类</div>'+(data.expCategories||[]).map(c=>{
+    const stickerSrc=(data.catStickers||{})[c.id];
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px"><div onclick="openStickerPicker('${c.id}', renderExpCatModalList)" style="width:40px;height:40px;border-radius:10px;border:1px dashed rgba(140,120,180,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">${stickerSrc?`<img src="${stickerSrc}" style="width:36px;height:36px;object-fit:contain">`:'<span style="font-size:18px;color:var(--text3)">+</span>'}</div><div><div style="font-size:14px;color:var(--text)">${c.label}</div>${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}</div></div><button onclick="deleteExpCat('${c.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button></div>`;
+  }).join(''):'';
+  el.innerHTML=builtInHtml+customHtml;
+}
+
+function addBuiltInSub(catId) {
+  const sub=prompt('添加子分类：'); if(!sub||!sub.trim())return;
+  if(!data.expCatOverrides)data.expCatOverrides={};
+  const cat=EXP_CATEGORIES.find(c=>c.id===catId);
+  const current=data.expCatOverrides[catId]!==undefined?data.expCatOverrides[catId]:(cat?.sub||[]);
+  if(!current.includes(sub.trim())){data.expCatOverrides[catId]=[...current,sub.trim()];save();}
+  renderExpCatModalList();
+}
+
+function removeBuiltInSub(catId,sub) {
+  if(!data.expCatOverrides)data.expCatOverrides={};
+  const cat=EXP_CATEGORIES.find(c=>c.id===catId);
+  const current=data.expCatOverrides[catId]!==undefined?data.expCatOverrides[catId]:(cat?.sub||[]);
+  data.expCatOverrides[catId]=current.filter(s=>s!==sub);
+  save(); renderExpCatModalList();
+}
+
+function renderIncCatList() {
+  const el=document.getElementById('incCatList'); if(!el)return;
+  el.innerHTML=data.incCategories.map(c=>{
+    const stickerSrc=(data.catStickers||{})['inc_'+c];
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px"><div onclick="openStickerPicker('inc_${c}', renderIncCatList)" style="width:36px;height:36px;border-radius:9px;border:1px dashed rgba(140,120,180,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">${stickerSrc?`<img src="${stickerSrc}" style="width:32px;height:32px;object-fit:contain">`:'<span style="font-size:16px;color:var(--text3)">+</span>'}</div><span style="font-size:14px;color:var(--text2)">${c}</span></div><button onclick="deleteIncCat('${c}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 4px">×</button></div>`;
+  }).join('');
+}
+
 function openIncCatModal() {
   renderIncCatList();
   document.getElementById('incCatModal').classList.add('open');
 }
 
-function renderIncCatList() {
-  const el = document.getElementById('incCatList');
-  el.innerHTML = data.incCategories.map(c => {
-    const stickerSrc = (data.catStickers||{})['inc_'+c];
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:8px">
-        <div onclick="openStickerPicker('inc_${c}', renderIncCatList)" style="width:36px;height:36px;border-radius:9px;border:1px dashed rgba(140,120,180,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
-          ${stickerSrc ? `<img src="${stickerSrc}" style="width:32px;height:32px;object-fit:contain">` : '<span style="font-size:16px;color:var(--text3)">+</span>'}
-        </div>
-        <span style="font-size:14px;color:var(--text2)">${c}</span>
-      </div>
-      <button onclick="deleteIncCat('${c}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 4px">×</button>
-    </div>`;
-  }).join('');
-}
-
 function addIncCat() {
-  const name = document.getElementById('newIncCat').value.trim();
-  if (!name) return;
-  if (!data.incCategories.includes(name)) {
-    data.incCategories.push(name);
-    save();
-  }
-  document.getElementById('newIncCat').value = '';
-  renderIncCatList();
-  renderIncomePage();
-  showToast('分类已添加');
+  const name=document.getElementById('newIncCat').value.trim(); if(!name)return;
+  if(!data.incCategories.includes(name)){data.incCategories.push(name);save();}
+  document.getElementById('newIncCat').value='';
+  renderIncCatList(); renderIncomePage(); showToast('分类已添加');
 }
 
 function deleteIncCat(name) {
-  data.incCategories = data.incCategories.filter(c => c !== name);
-  if (ui.currentIncCat === name) ui.currentIncCat = data.incCategories[0] || '';
+  data.incCategories=data.incCategories.filter(c=>c!==name);
+  if(ui.currentIncCat===name)ui.currentIncCat=data.incCategories[0]||'';
+  save(); renderIncCatList(); renderIncomePage();
+}
+
+// ============================================================
+// STICKER PICKER
+// ============================================================
+let _stickerCallback=null,_currentStickerCatId=null;
+
+function openStickerPicker(catId,callback) {
+  _currentStickerCatId=catId; _stickerCallback=callback;
+  const grid=document.getElementById('stickerGrid');
+  const currentSticker=(data.catStickers||{})[catId]||null;
+  const groupLabel=(text)=>`<div class="sticker-group-label">${text}</div>`;
+  let html=`<div class="sticker-none" onclick="selectSticker(null)" title="清除">✕</div>`;
+  html+=groupLabel('套装一');
+  for(let i=1;i<=20;i++){const num=String(i).padStart(2,'0'),src='stickers/sticker_'+num+'.png';html+=`<div class="sticker-option${currentSticker===src?' selected':''}" onclick="selectSticker('${src}')"><img src="${src}" loading="lazy"></div>`;}
+  html+=groupLabel('套装二');
+  for(let i=1;i<=21;i++){const num=String(i).padStart(2,'0'),src='stickers/little_prince_icon_'+num+'.png';html+=`<div class="sticker-option${currentSticker===src?' selected':''}" onclick="selectSticker('${src}')"><img src="${src}" loading="lazy"></div>`;}
+  grid.innerHTML=html;
+  document.getElementById('stickerPickerOverlay').classList.add('open');
+}
+
+function selectSticker(src) {
+  if(!data.catStickers)data.catStickers={};
+  if(src)data.catStickers[_currentStickerCatId]=src;
+  else delete data.catStickers[_currentStickerCatId];
   save();
-  renderIncCatList();
-  renderIncomePage();
+  document.getElementById('stickerPickerOverlay').classList.remove('open');
+  if(_stickerCallback)_stickerCallback();
+  renderExpensePage(); renderIncomePage();
 }
 
-// REPORT
-function changeReportPeriod(delta) {
-  ui.reportPeriodOffset = (ui.reportPeriodOffset||0) + delta;
-  renderReport();
-}
+document.getElementById('stickerPickerOverlay').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 
-function changeReportMonth(delta) { changeReportPeriod(delta); }
+// ============================================================
+// NAVIGATION
+// ============================================================
+function goTo(page) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.main-nav').forEach(b=>b.classList.remove('active'));
+  const sec=document.getElementById('section-'+page); if(sec)sec.classList.add('active');
+  document.body.setAttribute('data-page',page);
+  const pages=['overview','expense','income','assets','calendar','report'];
+  const navBtns=document.querySelectorAll('.main-nav');
+  const idx=pages.indexOf(page); if(idx>=0&&navBtns[idx])navBtns[idx].classList.add('active');
+  if(page==='expense'){document.getElementById('expDate').value=today();document.getElementById('trfDate').value=today();document.getElementById('payDate').value=today();ui.currentExpSubCat='';const sw=document.getElementById('expSubCatWrap');if(sw)sw.style.display='none';renderExpensePage();}
+  if(page==='income'){document.getElementById('incDate').value=today();renderIncomePage();}
+  if(page==='assets')renderAssets();
+  if(page==='calendar')renderCalendarPage();
+  if(page==='report'){ui.statsType=ui.statsType||'expense';setReportPeriod(ui.reportPeriod||'month');}
+  if(page==='overview')renderOverview();
+}
 
 // ============================================================
 // MODALS
 // ============================================================
 function openModal(id) {
-  if (id === 'editBudgetModal') { openBudgetModal(); return; }
-  if (id === 'incCatModal') { renderIncCatList(); document.getElementById('incCatModal').classList.add('open'); return; }
-  if (id === 'expCatModal') { renderExpCatModalList(); document.getElementById(id).classList.add('open'); return; }
+  if(id==='editBudgetModal'){renderBudgetFormFields();document.getElementById(id).classList.add('open');return;}
+  if(id==='incCatModal'){openIncCatModal();return;}
+  if(id==='expCatModal'){renderExpCatModalList();document.getElementById(id).classList.add('open');return;}
   document.getElementById(id).classList.add('open');
 }
-
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
-
-document.querySelectorAll('.modal-overlay').forEach(el => {
-  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
-});
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});});
 
 // ============================================================
-// UTILS
+// REPORT / STATS
 // ============================================================
-function today() { return new Date().toISOString().slice(0,10); }
+function setReportPeriod(period) {
+  ui.reportPeriod=period; ui.reportPeriodOffset=0;
+  ['week','month','year'].forEach(p=>{const btn=document.getElementById('sp'+p.charAt(0).toUpperCase()+p.slice(1));if(btn)btn.classList.toggle('active',p===period);});
+  renderReport();
+}
+function setStatsPeriod(p){setReportPeriod(p);}
+function changeReportPeriod(delta){ui.reportPeriodOffset=(ui.reportPeriodOffset||0)+delta;renderReport();}
+function changeReportMonth(delta){changeReportPeriod(delta);}
 
-function getWeekStart() {
-  const now = new Date();
-  const d = new Date(now);
-  d.setDate(now.getDate() - now.getDay());
-  d.setHours(0,0,0,0);
-  return d;
+function setStatsType(type) {
+  ui.statsType=type;
+  const expBtn=document.getElementById('stExp'),incBtn=document.getElementById('stInc');
+  if(expBtn)expBtn.className='stats-type-btn'+(type==='expense'?' active exp-active':'');
+  if(incBtn)incBtn.className='stats-type-btn'+(type==='income'?' active inc-active':'');
+  renderReport();
 }
 
-function formatDate(s) {
-  const d = new Date(s);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const diff = Math.round((today - target) / 86400000);
-  if (diff === 0) return '今天';
-  if (diff === 1) return '昨天';
-  if (diff === 2) return '前天';
-  return `${d.getMonth()+1}月${d.getDate()}日`;
+function renderReport() {
+  const now=new Date();
+  let txs,labelText;
+  const period=ui.reportPeriod||'month',offset=ui.reportPeriodOffset||0;
+  if(period==='week'){
+    const ws=new Date(now); ws.setDate(now.getDate()-now.getDay()+offset*7); ws.setHours(0,0,0,0);
+    const we=new Date(ws); we.setDate(ws.getDate()+6); we.setHours(23,59,59,999);
+    const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    labelText=mo[ws.getMonth()]+' '+ws.getDate()+' – '+mo[we.getMonth()]+' '+we.getDate();
+    txs=data.transactions.filter(t=>{const d=new Date(t.date);return d>=ws&&d<=we;});
+  } else if(period==='year'){
+    const y=now.getFullYear()+offset; labelText=y+'年';
+    txs=data.transactions.filter(t=>new Date(t.date).getFullYear()===y);
+  } else {
+    let m=now.getMonth()+offset,y=now.getFullYear();
+    while(m<0){m+=12;y--;}while(m>11){m-=12;y++;}
+    labelText=y+'年'+(m+1)+'月';
+    txs=data.transactions.filter(t=>{const d=new Date(t.date);return d.getFullYear()===y&&d.getMonth()===m;});
+  }
+  const navLabel=document.getElementById('statsNavLabel'); if(navLabel)navLabel.textContent=labelText;
+  const type=ui.statsType||'expense';
+  const filteredTxs=txs.filter(t=>t.type===type);
+  const totalInc=txs.filter(t=>t.type==='income').reduce((s,t)=>s+parseFloat(t.amount),0);
+  const totalExp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+parseFloat(t.amount),0);
+  const net=totalInc-totalExp;
+  const incEl=document.getElementById('statsTotalInc'); if(incEl)incEl.textContent='+$'+totalInc.toFixed(2);
+  const expEl=document.getElementById('statsTotalExp'); if(expEl)expEl.textContent='-$'+totalExp.toFixed(2);
+  const netEl=document.getElementById('statsTotalNet'); if(netEl){netEl.textContent=(net>=0?'+':'-')+'$'+Math.abs(net).toFixed(2);netEl.className='stats-summary-value '+(net>=0?'inc':'exp');}
+  const cats=allExpCats();
+  const catMap={};
+  filteredTxs.forEach(t=>{const catId=t.category||'other';if(!catMap[catId])catMap[catId]={amount:0,count:0,subs:{}};catMap[catId].amount+=parseFloat(t.amount);catMap[catId].count++;const note=(t.note||'').trim();if(note){if(!catMap[catId].subs[note])catMap[catId].subs[note]={amount:0,count:0};catMap[catId].subs[note].amount+=parseFloat(t.amount);catMap[catId].subs[note].count++;}});
+  const total=Object.values(catMap).reduce((s,c)=>s+c.amount,0);
+  const COLORS=['#D25064','#E6BE5A','#8C78B4','#2850A0','#C5A384','#7ec8a0','#E87A90','#6090d0','#b0885a'];
+  const sorted=Object.entries(catMap).sort((a,b)=>b[1].amount-a[1].amount);
+  const arcsEl=document.getElementById('donutArcs'),legendEl=document.getElementById('donutLegend');
+  const donutLblEl=document.getElementById('donutLabel'); if(donutLblEl)donutLblEl.textContent=type==='expense'?'总支出':'总收入';
+  const donutAmtEl=document.getElementById('donutAmount'); if(donutAmtEl)donutAmtEl.textContent=total>0?'$'+total.toFixed(0):'$0';
+  if(arcsEl){
+    if(total===0||sorted.length===0){arcsEl.innerHTML='<circle cx="100" cy="100" r="70" fill="none" stroke="rgba(140,120,180,0.15)" stroke-width="32"/>';if(legendEl)legendEl.innerHTML='';}
+    else{
+      let svgArcs='',cumAngle=-Math.PI/2;
+      sorted.forEach(function(entry,i){const catId=entry[0],catData=entry[1];const pct=catData.amount/total;const angle=pct*2*Math.PI;const color=COLORS[i%COLORS.length];const gap=sorted.length>1?0.03:0;const arcAngle=Math.max(angle-gap,0.01);const x1=100+70*Math.cos(cumAngle+gap/2),y1=100+70*Math.sin(cumAngle+gap/2);const x2=100+70*Math.cos(cumAngle+arcAngle+gap/2),y2=100+70*Math.sin(cumAngle+arcAngle+gap/2);const la=arcAngle>Math.PI?1:0;svgArcs+='<path d="M '+x1.toFixed(2)+' '+y1.toFixed(2)+' A 70 70 0 '+la+' 1 '+x2.toFixed(2)+' '+y2.toFixed(2)+'" fill="none" stroke="'+color+'" stroke-width="32" stroke-linecap="butt"/>';cumAngle+=angle;});
+      arcsEl.innerHTML=svgArcs;
+      if(legendEl)legendEl.innerHTML=sorted.map(function(entry,i){const catId=entry[0],catData=entry[1];const cat=cats.find(c=>c.id===catId)||{label:catId};const color=COLORS[i%COLORS.length];const pct=total>0?(catData.amount/total*100).toFixed(0):0;return'<div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.06);border-radius:20px;padding:4px 10px 4px 6px"><div style="width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0"></div><span style="font-size:12px;color:var(--text2)">'+cat.label+'</span><span style="font-size:11px;color:var(--text3)">'+pct+'%</span></div>';}).join('');
+    }
+  }
+  const listEl=document.getElementById('statsCatList'); if(!listEl)return;
+  if(sorted.length===0){listEl.innerHTML='<div class="empty-state"><div class="empty-icon">✦</div><div class="empty-text">该期间没有记录</div></div>';return;}
+  listEl.innerHTML=sorted.map(function(entry,i){const catId=entry[0],catData=entry[1];const cat=cats.find(c=>c.id===catId)||{label:catId};const pct=total>0?(catData.amount/total*100).toFixed(1):0;const color=COLORS[i%COLORS.length];const subItems=Object.entries(catData.subs).sort((a,b)=>b[1].amount-a[1].amount);const hasExpand=subItems.length>1;const subHtml=hasExpand?'<div class="stats-sub-list" id="sub_'+catId+'" style="display:none">'+subItems.map(se=>'<div class="stats-sub-item"><div class="stats-sub-name">'+se[0]+'</div><div class="stats-sub-right"><div class="stats-sub-amount">$'+se[1].amount.toFixed(2)+'</div><div class="stats-sub-pct">'+(se[1].amount/catData.amount*100).toFixed(0)+'% · '+se[1].count+'笔</div></div></div>').join('')+'</div>':'';return'<div class="stats-cat-item"><div class="stats-cat-header" onclick="'+(hasExpand?'toggleStatsSub(\''+catId+'\')':'')+'"><div class="stats-cat-dot" style="background:'+color+'"></div><div class="stats-cat-info"><div class="stats-cat-name">'+cat.label+(hasExpand?' <span style="font-size:10px;color:var(--text3)" id="arr_'+catId+'">▸</span>':'')+'</div><div class="stats-cat-bar-wrap"><div class="stats-cat-bar" style="width:'+pct+'%;background:'+color+'"></div></div></div><div class="stats-cat-right"><div class="stats-cat-amount">$'+catData.amount.toFixed(2)+'</div><div class="stats-cat-count">'+pct+'% · '+catData.count+'笔</div></div></div>'+subHtml+'</div>';}).join('');
 }
 
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2000);
+function toggleStatsSub(catId) {
+  const el=document.getElementById('sub_'+catId),arr=document.getElementById('arr_'+catId);
+  if(!el)return; const isOpen=el.style.display!=='none';
+  el.style.display=isOpen?'none':'block'; if(arr)arr.textContent=isOpen?'▸':'▾';
+}
+
+// ============================================================
+// CALENDAR
+// ============================================================
+function renderCalendarPage() {
+  renderDailyBudget(); renderPiggyBank(); renderCalendar();
+}
+
+function renderDailyBudget() {
+  const el=document.getElementById('dailyBudgetRow'); if(!el)return;
+  const todayStr=today();
+  el.innerHTML=data.budgets.map(b=>{
+    const weekStart=getWeekStart();
+    const dailyBudget=b.amount/7;
+    const todaySpent=data.transactions.filter(t=>t.type==='expense'&&t.budget_id===b.id&&t.date.slice(0,10)===todayStr).reduce((s,t)=>s+parseFloat(t.amount),0);
+    const remaining=dailyBudget-todaySpent;
+    const cls=remaining>dailyBudget*0.5?'good':remaining>0?'warn':'over';
+    return`<div class="daily-stat"><div class="daily-stat-label">${b.name}</div><div class="daily-stat-value ${cls}">$${Math.abs(remaining).toFixed(0)}${remaining<0?'↑':''}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">今日可用 $${dailyBudget.toFixed(0)}</div></div>`;
+  }).join('')||'<div style="color:var(--text3);font-size:13px">还没有预算</div>';
+}
+
+function renderPiggyBank() {
+  const now=new Date(),weeks=[];
+  let cursor=new Date(now.getFullYear(),0,1);
+  cursor.setDate(cursor.getDate()-cursor.getDay());
+  while(cursor<=now){
+    const wStart=new Date(cursor),wEnd=new Date(cursor);
+    wEnd.setDate(wEnd.getDate()+6); wEnd.setHours(23,59,59,999);
+    const isCurrent=wStart<=now&&wEnd>=now;
+    if(!isCurrent){
+      const groceryBudget=data.budgets.find(b=>b.id==='family_groceries')||data.budgets.find(b=>b.name.includes('买菜'));
+      const personalBudget=data.budgets.find(b=>b.id==='personal')||data.budgets.find(b=>b.name.includes('个人'));
+      const hasActivity=data.transactions.some(t=>{const d=new Date(t.date);return d>=wStart&&d<=wEnd;});
+      if(hasActivity){
+        const label=`${wStart.getMonth()+1}/${wStart.getDate()} – ${wEnd.getMonth()+1}/${wEnd.getDate()}`;
+        let grocerySaved=0,personalSaved=0;
+        if(groceryBudget){const spent=data.transactions.filter(t=>t.type==='expense'&&t.budget_id===groceryBudget.id&&new Date(t.date)>=wStart&&new Date(t.date)<=wEnd).reduce((s,t)=>s+parseFloat(t.amount),0);grocerySaved=groceryBudget.amount-spent;}
+        if(personalBudget){const spent=data.transactions.filter(t=>t.type==='expense'&&t.budget_id===personalBudget.id&&new Date(t.date)>=wStart&&new Date(t.date)<=wEnd).reduce((s,t)=>s+parseFloat(t.amount),0);personalSaved=personalBudget.amount-spent;}
+        weeks.push({label,grocerySaved,personalSaved});
+      }
+    }
+    cursor.setDate(cursor.getDate()+7);
+  }
+  const groceryBudget=data.budgets.find(b=>b.id==='family_groceries');
+  const personalBudget=data.budgets.find(b=>b.id==='personal');
+  const groceryTotal=weeks.reduce((s,w)=>s+Math.max(w.grocerySaved,0),0);
+  const personalTotal=weeks.reduce((s,w)=>s+Math.max(w.personalSaved,0),0);
+  const gEl=document.getElementById('grocerySaved'); if(gEl)gEl.innerHTML=`<span style="font-size:14px">$ </span>${groceryTotal.toFixed(2)}`;
+  const pEl=document.getElementById('personalSaved'); if(pEl)pEl.innerHTML=`<span style="font-size:14px">$ </span>${personalTotal.toFixed(2)}`;
+  const groceryWeeks=weeks.filter(w=>w.grocerySaved>0).length;
+  const personalWeeks=weeks.filter(w=>w.personalSaved>0).length;
+  const starsEl=document.getElementById('groceryStars'); if(starsEl)starsEl.textContent=groceryWeeks>0?'⭐'.repeat(Math.min(groceryWeeks,10)):'—';
+  const rosesEl=document.getElementById('personalRoses'); if(rosesEl)rosesEl.textContent=personalWeeks>0?'🌹'.repeat(Math.min(personalWeeks,10)):'—';
+  const histEl=document.getElementById('piggyHistory'); if(!histEl)return;
+  const recent=weeks.slice(-8).reverse();
+  if(recent.length===0){histEl.innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:12px;font-style:italic">记录第一周后这里会显示明细</div>';return;}
+  histEl.innerHTML=recent.map(w=>`<div class="piggy-week-item" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;align-items:center"><div class="piggy-week-label">${w.label}</div><div class="piggy-week-amt ${w.grocerySaved>=0?'saved':'over'}" style="text-align:center;font-size:13px">${w.grocerySaved>=0?'+':''}$${w.grocerySaved.toFixed(0)}<span style="font-size:10px;color:var(--text3);margin-left:2px">🥬</span></div><div class="piggy-week-amt ${w.personalSaved>=0?'saved':'over'}" style="text-align:right;font-size:13px">${w.personalSaved>=0?'+':''}$${w.personalSaved.toFixed(0)}<span style="font-size:10px;color:var(--text3);margin-left:2px">🌹</span></div></div>`).join('');
+}
+
+function renderCalendar() {
+  const y=calState.year,m=calState.month;
+  const calLbl=document.getElementById('calMonthLabel'); if(calLbl)calLbl.textContent=`${y}年${m+1}月`;
+  const grid=document.getElementById('calGrid'); if(!grid)return;
+  const dows=['日','一','二','三','四','五','六'];
+  let html=dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  const firstDay=new Date(y,m,1).getDay(),daysInMonth=new Date(y,m+1,0).getDate(),daysInPrev=new Date(y,m,0).getDate(),todayStr=today();
+  const txMap={};
+  data.transactions.forEach(t=>{const d=t.date.slice(0,10);if(!txMap[d])txMap[d]={exp:0,inc:0};if(t.type==='expense')txMap[d].exp+=parseFloat(t.amount);else if(t.type==='income')txMap[d].inc+=parseFloat(t.amount);});
+  for(let i=firstDay-1;i>=0;i--)html+=`<div class="cal-day other-month"><div class="cal-day-num">${daysInPrev-i}</div></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=dateStr===todayStr,isSel=dateStr===calState.selectedDate;
+    const dayData=txMap[dateStr];
+    let balHtml='';
+    if(dayData){const net=dayData.inc-dayData.exp;const cls=net>=0?'pos':'neg';balHtml=`<div class="cal-day-balance ${cls}">${net>=0?'+':''}${Math.abs(net)<100?net.toFixed(0):Math.round(net/10)*10/10}</div>`;}
+    html+=`<div class="cal-day ${isToday?'today':''} ${isSel&&!isToday?'selected':''}" onclick="selectCalDay('${dateStr}')"><div class="cal-day-num">${d}</div>${balHtml}</div>`;
+  }
+  const totalCells=Math.ceil((firstDay+daysInMonth)/7)*7;
+  let nextDay=1;
+  for(let i=firstDay+daysInMonth;i<totalCells;i++)html+=`<div class="cal-day other-month"><div class="cal-day-num">${nextDay++}</div></div>`;
+  grid.innerHTML=html;
+  if(calState.selectedDate)selectCalDay(calState.selectedDate,true);
+}
+
+function selectCalDay(dateStr,silent) {
+  calState.selectedDate=dateStr;
+  if(!silent)renderCalendar();
+  const txs=data.transactions.filter(t=>t.date.slice(0,10)===dateStr);
+  const exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+parseFloat(t.amount),0);
+  const inc=txs.filter(t=>t.type==='income').reduce((s,t)=>s+parseFloat(t.amount),0);
+  const d=new Date(dateStr),dateLabel=`${d.getMonth()+1}月${d.getDate()}日`;
+  const detail=document.getElementById('calDayDetail'); if(!detail)return;
+  if(txs.length===0){detail.innerHTML=`<div class="cal-detail-header"><div class="cal-detail-date">${dateLabel}</div></div><div style="color:var(--text3);font-size:13px;font-style:italic;text-align:center;padding:8px">这天没有记录</div>`;return;}
+  detail.innerHTML=`<div class="cal-detail-header"><div class="cal-detail-date">${dateLabel}</div><div class="cal-detail-totals">${exp>0?`<div class="cal-detail-stat exp">-$${exp.toFixed(2)}</div>`:''} ${inc>0?`<div class="cal-detail-stat inc">+$${inc.toFixed(2)}</div>`:''}</div></div><div class="tx-list">${txs.map(t=>renderTxItem(t)).join('')}</div>`;
+}
+
+function changeCalMonth(delta) {
+  calState.month+=delta;
+  if(calState.month<0){calState.month=11;calState.year--;}
+  if(calState.month>11){calState.month=0;calState.year++;}
+  renderCalendar();
 }
 
 // ============================================================
 // STARS
 // ============================================================
 function initStars() {
-  const bg = document.getElementById('starsBg');
-  for (let i = 0; i < 80; i++) {
-    const s = document.createElement('div');
-    s.className = 'star-dot';
-    const size = Math.random() * 2 + 0.5;
-    s.style.cssText = `
-      width:${size}px; height:${size}px;
-      left:${Math.random()*100}%;
-      top:${Math.random()*100}%;
-      --dur:${2+Math.random()*4}s;
-      --delay:${Math.random()*4}s;
-      --min-op:${0.08+Math.random()*0.12};
-      --max-op:${0.25+Math.random()*0.35};
-    `;
-    bg.appendChild(s);
-  }
+  const bg=document.getElementById('starsBg'); if(!bg)return;
+  for(let i=0;i<80;i++){const s=document.createElement('div');s.className='star-dot';const size=Math.random()*2+0.5;s.style.cssText=`width:${size}px;height:${size}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${2+Math.random()*4}s;--delay:${Math.random()*4}s;--min-op:${0.08+Math.random()*0.12};--max-op:${0.25+Math.random()*0.35};`;bg.appendChild(s);}
 }
-
 
 
 // ============================================================
-// ASSETS PAGE
+// EDIT TRANSACTION
 // ============================================================
-function renderAssets() {
-  const accounts = data.accounts;
-
-  // Separate cash/debit/savings vs credit
-  const cashAccs = accounts.filter(a => a.type !== 'credit');
-  const creditAccs = accounts.filter(a => a.type === 'credit');
-
-  const totalAssets = cashAccs.filter(a=>a.include_in_net!==false).reduce((s,a) => s + Math.max(parseFloat(a.balance), 0), 0);
-  const totalDebts  = creditAccs.filter(a=>a.include_in_net!==false).reduce((s,a) => s + Math.abs(Math.min(parseFloat(a.balance), 0)), 0);
-  const netWorth    = totalAssets - totalDebts;
-
-  // Net worth card
-  const nwEl = document.getElementById('netWorthAmount');
-  nwEl.textContent = `${netWorth < 0 ? '-' : ''}$${Math.abs(netWorth).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-  nwEl.className = `net-worth-amount ${netWorth >= 0 ? 'positive' : 'negative'}`;
-  document.getElementById('totalAssets').textContent = `$${totalAssets.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-  document.getElementById('totalDebts').textContent  = `$${totalDebts.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-
-  // Cash/Debit group
-  const cashGroup = document.getElementById('assetGroupCash');
-  const cashTotal = cashAccs.reduce((s,a) => s + parseFloat(a.balance), 0);
-  cashGroup.innerHTML = `
-    <div class="asset-group-header">
-      <div class="asset-group-name">现金 · 储蓄</div>
-      <div class="asset-group-total ${cashTotal>=0?'pos':'neg'}">$${Math.abs(cashTotal).toFixed(2)}</div>
-    </div>
-    ${cashAccs.map(a => {
-      const b = parseFloat(a.balance);
-      const cls = b > 0 ? 'pos' : (b < 0 ? 'neg' : 'zero');
-      const typeLabel = {cash:'现金', debit:'储蓄卡', savings:'储蓄账户', digital:'数字钱包'}[a.type] || a.type;
-      const inNet2 = a.include_in_net !== false;
-      return `<div class="asset-row" onclick="openEditAcc('${a.id}')">
-        <div class="asset-row-left">
-          <div class="asset-row-name">${a.name}${!inNet2 ? ' <span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:1px 5px;border-radius:4px">不计入</span>' : ''}</div>
-          <div class="asset-row-type">${typeLabel}</div>
-        </div>
-        <div class="asset-row-balance ${cls}">$${b < 0 ? '-' : ''}${Math.abs(b).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
-      </div>`;
-    }).join('')}
-  `;
-
-  // Credit group
-  const creditGroup = document.getElementById('assetGroupCredit');
-  if (creditAccs.length === 0) {
-    creditGroup.style.display = 'none';
-    return;
-  }
-  creditGroup.style.display = '';
-  const creditOwedTotal = creditAccs.filter(a=>a.include_in_net!==false).reduce((s,a) => s + Math.abs(Math.min(parseFloat(a.balance),0)), 0);
-  creditGroup.innerHTML = `
-    <div class="asset-group-header">
-      <div class="asset-group-name">信用卡 (${creditAccs.length})</div>
-      <div style="text-align:right">
-        <div class="asset-group-total neg">欠款: $${creditOwedTotal.toFixed(2)}</div>
-      </div>
-    </div>
-    ${creditAccs.map(a => {
-      const b = parseFloat(a.balance);
-      const cls = b > 0 ? 'pos' : (b < 0 ? 'neg' : 'zero');
-      const owed = Math.abs(Math.min(b, 0));
-      const limit = parseFloat(a.credit_limit) || 0;
-      const avail = limit > 0 ? Math.max(limit - owed, 0) : null;
-      const inNet = a.include_in_net !== false;
-      const usedPct = limit > 0 ? Math.min(owed/limit*100, 100) : 0;
-      const barCol = usedPct < 50 ? '#7ec8a0' : usedPct < 80 ? '#E6BE5A' : '#D25064';
-      return `<div class="asset-row" style="flex-direction:column;align-items:stretch;gap:8px" onclick="openEditAcc('${a.id}')">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div>
-            <div class="asset-row-name">${a.name}${!inNet ? ' <span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:1px 5px;border-radius:4px">不计入</span>' : ''}</div>
-            <div class="asset-row-type">信用卡</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0">
-            <div style="font-family:'EB Garamond',serif;font-size:18px;color:#D25064">-$${owed.toFixed(2)}</div>
-            ${limit > 0 ? `<div style="font-size:11px;color:#3a7850;margin-top:1px">可用额度: $${avail.toFixed(2)}</div>` : '<div style="font-size:11px;color:var(--text3);margin-top:1px">点击设置额度</div>'}
-          </div>
-        </div>
-        ${limit > 0 ? `<div>
-          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px">
-            <span>已用 $${owed.toFixed(2)} / 总额度 $${limit.toFixed(0)}</span>
-            <span>${usedPct.toFixed(0)}%</span>
-          </div>
-          <div style="height:4px;background:rgba(140,120,180,0.1);border-radius:2px;overflow:hidden">
-            <div style="height:4px;border-radius:2px;background:${barCol};width:${usedPct}%;transition:width 0.4s"></div>
-          </div>
-        </div>` : ''}
-      </div>`;
-    }).join('')}
-  `;
-
-  // Budget group
-  const budgetGroup = document.getElementById('assetBudgetGroup');
-  if (budgetGroup) {
-    budgetGroup.innerHTML = data.budgets.map(b => {
-      const weekStart = getWeekStart();
-      const spent = data.transactions
-        .filter(t => t.type==='expense' && t.budget_id===b.id && new Date(t.date)>=weekStart)
-        .reduce((s,t)=>s+parseFloat(t.amount),0);
-      const pct = Math.min(spent/b.amount,1);
-      const barW = pct*100;
-      const barCol = pct<0.7?'#7ec8a0':pct<1?'#E6BE5A':'#D25064';
-      return `<div class="asset-row">
-        <div class="asset-row-left">
-          <div class="asset-row-name">${b.name}</div>
-          <div class="asset-row-type">每周 $${b.amount} · 已用 $${spent.toFixed(0)}</div>
-          <div style="margin-top:5px;height:3px;background:rgba(140,120,180,0.1);border-radius:2px;width:140px">
-            <div style="height:3px;border-radius:2px;background:${barCol};width:${barW}%"></div>
-          </div>
-        </div>
-        <div style="font-family:'EB Garamond',serif;font-size:16px;color:${pct>=1?'#D25064':'var(--text)'}">$${(b.amount-spent).toFixed(0)}</div>
-      </div>`;
-    }).join('') || '<div style="padding:14px;color:var(--text3);font-size:13px;text-align:center">还没有预算</div>';
-  }
-
-  // Expense categories
-  const expCatGroup = document.getElementById('expCatGroup');
-  if (expCatGroup) {
-    expCatGroup.innerHTML = (data.expCategories||[]).map(c => `
-      <div class="asset-row">
-        <div class="asset-row-left">
-          <div class="asset-row-name">${c.label}</div>
-          ${c.sub && c.sub.length ? `<div class="asset-row-type">${c.sub.join(' · ')}</div>` : ''}
-        </div>
-        <button onclick="deleteExpCat('${c.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:4px">×</button>
-      </div>
-    `).join('');
-  }
-
-  // Income categories
-  const incCatGroup = document.getElementById('incCatGroup');
-  if (incCatGroup) {
-    incCatGroup.innerHTML = (data.incCategories||[]).map(c => `
-      <div class="asset-row">
-        <div class="asset-row-left">
-          <div class="asset-row-name">${c}</div>
-        </div>
-        <button onclick="deleteIncCat('${c}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:4px">×</button>
-      </div>
-    `).join('');
-  }
-
-  // Balance history
-  const histEl = document.getElementById('balanceHistoryList');
-  if (histEl) {
-    const hist = [...(data.balanceHistory||[])].reverse().slice(0,20);
-    if (hist.length === 0) {
-      histEl.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px;font-style:italic">还没有余额更新记录</div>';
-    } else {
-      histEl.innerHTML = hist.map(h => {
-        const d = new Date(h.date);
-        const dateStr = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-        const diff = parseFloat(h.new_balance) - parseFloat(h.old_balance);
-        const diffStr = (diff>=0?'+':'') + '$' + Math.abs(diff).toFixed(2);
-        const diffCol = diff>0?'#7ec8a0':diff<0?'#D25064':'var(--text3)';
-        return `<div class="bal-history-item">
-          <div class="bal-history-left">
-            <div class="bal-history-acc">${h.account_name}</div>
-            <div class="bal-history-date">${dateStr}${h.note ? ' · ' + h.note : ''}</div>
-          </div>
-          <div class="bal-history-right">
-            <div class="bal-history-new">$${Math.abs(parseFloat(h.new_balance)).toFixed(2)}</div>
-            <div class="bal-history-old" style="color:${diffCol}">${diffStr}</div>
-          </div>
-        </div>`;
-      }).join('');
-    }
-  }
-}
-
-function addNewAccount() {
-  const name = document.getElementById('newAccName2').value.trim();
-  if (!name) { showToast('请输入账户名称'); return; }
-  const type = document.getElementById('newAccType2').value;
-  let bal = parseFloat(document.getElementById('newAccBal2').value) || 0;
-  const limit = parseFloat(document.getElementById('newAccLimit')?.value) || 0;
-  if (type === 'credit') bal = -Math.abs(bal);
-  data.accounts.push({ id: uid(), name, type, balance: bal, credit_limit: limit });
-  save();
-  closeModal('newAccountModal');
-  document.getElementById('newAccName2').value = '';
-  document.getElementById('newAccBal2').value = '';
-  renderAssets();
-  renderOverview();
-  showToast('账户已添加');
-}
-
-function addExpCat() {
-  const name = document.getElementById('newExpCatName').value.trim();
-  if (!name) { showToast('请输入分类名称'); return; }
-  const subRaw = document.getElementById('newExpCatSub').value.trim();
-  const sub = subRaw ? subRaw.split(/[,，]/).map(s=>s.trim()).filter(Boolean) : [];
-  const id = name.toLowerCase().replace(/\s+/g,'_') + '_' + Date.now().toString(36);
-  if (!data.expCategories) data.expCategories = [];
-  data.expCategories.push({ id, label: name, sub });
-  save();
-  document.getElementById('newExpCatName').value = '';
-  document.getElementById('newExpCatSub').value = '';
-  renderExpCatModalList();
-  renderAssets();
-  renderExpensePage();
-  showToast('分类已添加');
-}
-
-function deleteExpCat(id) {
-  data.expCategories = (data.expCategories||[]).filter(c=>c.id!==id);
-  save();
-  renderAssets();
-  renderExpensePage();
-  showToast('已删除');
-}
-
-function renderExpCatModalList() {
-  const el = document.getElementById('expCatModalList');
-  if (!el) return;
-
-  // Built-in cats - show with editable sub
-  const builtInHtml = EXP_CATEGORIES.map(c => {
-    // Check if user has overridden sub for this built-in
-    const override = (data.expCatOverrides||{})[c.id];
-    const subs = override !== undefined ? override : (c.sub||[]);
-    const stickerSrc = (data.catStickers||{})[c.id];
-    return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:8px">
-          <div onclick="openStickerPicker('${c.id}', renderExpCatModalList)" style="width:40px;height:40px;border-radius:10px;border:1px dashed rgba(140,120,180,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0" title="点击选择贴纸">
-            ${stickerSrc ? `<img src="${stickerSrc}" style="width:36px;height:36px;object-fit:contain">` : '<span style="font-size:18px;color:var(--text3)">+</span>'}
-          </div>
-          <div style="font-size:14px;color:var(--text);font-weight:500">${c.label}</div>
-        </div>
-        <span style="font-size:10px;color:var(--text3);background:rgba(140,120,180,0.1);padding:2px 6px;border-radius:4px">内置</span>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">
-        ${subs.map(s => `<span style="background:rgba(140,120,180,0.1);border:1px solid rgba(140,120,180,0.2);border-radius:12px;padding:3px 10px;font-size:12px;color:var(--text2);display:inline-flex;align-items:center;gap:4px">
-          ${s}
-          <button onclick="removeBuiltInSub('${c.id}','${s}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0;line-height:1">×</button>
-        </span>`).join('')}
-        <button onclick="addBuiltInSub('${c.id}')" style="background:rgba(140,120,180,0.08);border:1px dashed rgba(140,120,180,0.3);border-radius:12px;padding:3px 10px;font-size:12px;color:#8C78B4;cursor:pointer">+ 添加</button>
-      </div>
-    </div>`;
-  }).join('');
-
-  // Custom (deletable)
-  const customHtml = (data.expCategories||[]).length > 0 ?
-    '<div style="font-size:11px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;padding:10px 0 6px">自定义分类</div>' +
-    (data.expCategories||[]).map(c => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="display:flex;align-items:center;gap:8px">
-          <div onclick="openStickerPicker('${c.id}', renderExpCatModalList)" style="width:40px;height:40px;border-radius:10px;border:1px dashed rgba(140,120,180,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
-            ${(data.catStickers||{})[c.id] ? `<img src="${(data.catStickers||{})[c.id]}" style="width:36px;height:36px;object-fit:contain">` : '<span style="font-size:18px;color:var(--text3)">+</span>'}
-          </div>
-          <div>
-            <div style="font-size:14px;color:var(--text)">${c.label}</div>
-            ${c.sub&&c.sub.length?`<div style="font-size:11px;color:var(--text3)">${c.sub.join(' · ')}</div>`:''}
-          </div>
-        </div>
-        <button onclick="deleteExpCat('${c.id}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
-      </div>
-    `).join('') : '';
-
-  el.innerHTML = builtInHtml + customHtml;
-}
-
-function addBuiltInSub(catId) {
-  const sub = prompt('添加子分类：');
-  if (!sub || !sub.trim()) return;
-  if (!data.expCatOverrides) data.expCatOverrides = {};
-  const cat = EXP_CATEGORIES.find(c=>c.id===catId);
-  const current = data.expCatOverrides[catId] !== undefined ? data.expCatOverrides[catId] : (cat?.sub||[]);
-  if (!current.includes(sub.trim())) {
-    data.expCatOverrides[catId] = [...current, sub.trim()];
-    save();
-  }
-  renderExpCatModalList();
-}
-
-function removeBuiltInSub(catId, sub) {
-  if (!data.expCatOverrides) data.expCatOverrides = {};
-  const cat = EXP_CATEGORIES.find(c=>c.id===catId);
-  const current = data.expCatOverrides[catId] !== undefined ? data.expCatOverrides[catId] : (cat?.sub||[]);
-  data.expCatOverrides[catId] = current.filter(s=>s!==sub);
-  save();
-  renderExpCatModalList();
-}
-
-// ============================================================
-// CALENDAR
-// ============================================================
-let calState = {
-  month: new Date().getMonth(),
-  year: new Date().getFullYear(),
-  selectedDate: null,
-};
-
-function renderCalendarPage() {
-  renderDailyBudget();
-  renderPiggyBank();
-  renderCalendar();
-}
-
-function renderDailyBudget() {
-  const el = document.getElementById('dailyBudgetRow');
-  const todayStr = today();
-  const weekStart = getWeekStart();
-
-  el.innerHTML = data.budgets.map(b => {
-    const weekSpent = data.transactions
-      .filter(t => t.type === 'expense' && t.budget_id === b.id && new Date(t.date) >= weekStart)
-      .reduce((s,t) => s + t.amount, 0);
-
-    const dayOfWeek = new Date().getDay(); // 0=Sun
-    const daysElapsed = dayOfWeek === 0 ? 0 : dayOfWeek;
-    const daysLeft = 7 - daysElapsed;
-    const budgetUsedSoFar = b.amount * (daysElapsed / 7);
-    const dailyBudget = b.amount / 7;
-
-    const todaySpent = data.transactions
-      .filter(t => t.type === 'expense' && t.budget_id === b.id && t.date.slice(0,10) === todayStr)
-      .reduce((s,t) => s + t.amount, 0);
-
-    const remaining = dailyBudget - todaySpent;
-    const cls = remaining > dailyBudget * 0.5 ? 'good' : (remaining > 0 ? 'warn' : 'over');
-
-    return `<div class="daily-stat">
-      <div class="daily-stat-label">${b.name}</div>
-      <div class="daily-stat-value ${cls}">$${Math.abs(remaining).toFixed(0)}${remaining < 0 ? '↑' : ''}</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:2px">今日可用 $${dailyBudget.toFixed(0)}</div>
-    </div>`;
-  }).join('') || '<div style="color:var(--text3);font-size:13px">还没有设置预算</div>';
-}
-
-function getWeekRanges() {
-  // Returns all completed week ranges (Sun–Sat) from year start to last week
-  const now = new Date();
-  const weeks = [];
-  let cursor = new Date(now.getFullYear(), 0, 1);
-  cursor.setDate(cursor.getDate() - cursor.getDay()); // align to Sunday
-
-  while (cursor <= now) {
-    const wStart = new Date(cursor);
-    const wEnd = new Date(cursor);
-    wEnd.setDate(wEnd.getDate() + 6);
-    wEnd.setHours(23,59,59,999);
-    const isCurrentWeek = wStart <= now && wEnd >= now;
-    if (!isCurrentWeek) weeks.push({ wStart, wEnd });
-    cursor.setDate(cursor.getDate() + 7);
-  }
-  return weeks;
-}
-
-function getBudgetById(id) {
-  return data.budgets.find(b => b.id === id);
-}
-
-function weekSpentForBudget(budgetId, wStart, wEnd) {
-  return data.transactions
-    .filter(t => t.type === 'expense' && t.budget_id === budgetId)
-    .filter(t => { const d = new Date(t.date); return d >= wStart && d <= wEnd; })
-    .reduce((s,t) => s + t.amount, 0);
-}
-
-function renderPiggyBank() {
-  const weeks = getWeekRanges();
-
-  // Find the two main budget IDs
-  const groceryBudget = data.budgets.find(b => b.id === 'family_groceries') || data.budgets.find(b => b.name.includes('买菜'));
-  const personalBudget = data.budgets.find(b => b.id === 'personal') || data.budgets.find(b => b.name.includes('个人'));
-
-  // Per-budget weekly savings
-  let groceryTotal = 0, personalTotal = 0;
-  const weekRows = weeks.map(({wStart, wEnd}) => {
-    const label = `${wStart.getMonth()+1}/${wStart.getDate()} – ${wEnd.getMonth()+1}/${wEnd.getDate()}`;
-    let grocerySaved = 0, personalSaved = 0, otherSaved = 0;
-
-    if (groceryBudget) {
-      const spent = weekSpentForBudget(groceryBudget.id, wStart, wEnd);
-      // Only count as saved if we actually spent something OR it's a non-zero week
-      const hasActivity = data.transactions.some(t => {
-        const d = new Date(t.date); return d >= wStart && d <= wEnd;
-      });
-      if (hasActivity) grocerySaved = groceryBudget.amount - spent;
-    }
-    if (personalBudget) {
-      const spent = weekSpentForBudget(personalBudget.id, wStart, wEnd);
-      const hasActivity = data.transactions.some(t => {
-        const d = new Date(t.date); return d >= wStart && d <= wEnd;
-      });
-      if (hasActivity) personalSaved = personalBudget.amount - spent;
-    }
-    // Other budgets
-    data.budgets.forEach(b => {
-      if (b.id !== groceryBudget?.id && b.id !== personalBudget?.id) {
-        const spent = weekSpentForBudget(b.id, wStart, wEnd);
-        const hasActivity = data.transactions.some(t => {
-          const d = new Date(t.date); return d >= wStart && d <= wEnd;
-        });
-        if (hasActivity) otherSaved += b.amount - spent;
-      }
-    });
-
-    if (groceryBudget) groceryTotal += Math.max(grocerySaved, 0);
-    if (personalBudget) personalTotal += Math.max(personalSaved, 0);
-
-    return { label, grocerySaved, personalSaved, otherSaved };
-  });
-
-  // Update totals
-  const groceryEl = document.getElementById('grocerySaved');
-  const personalEl = document.getElementById('personalSaved');
-  if (groceryEl) groceryEl.innerHTML = `<span style="font-size:14px">$ </span>${groceryTotal.toFixed(2)}`;
-  if (personalEl) personalEl.innerHTML = `<span style="font-size:14px">$ </span>${personalTotal.toFixed(2)}`;
-
-  // Stars for grocery: 1 star per completed week with savings
-  const groceryWeeksWithSavings = weekRows.filter(w => w.grocerySaved > 0).length;
-  const starsEl = document.getElementById('groceryStars');
-  if (starsEl) starsEl.textContent = groceryWeeksWithSavings > 0 ? '⭐'.repeat(Math.min(groceryWeeksWithSavings, 10)) : '—';
-
-  // Roses for personal: 1 rose per completed week with savings
-  const personalWeeksWithSavings = weekRows.filter(w => w.personalSaved > 0).length;
-  const rosesEl = document.getElementById('personalRoses');
-  if (rosesEl) rosesEl.textContent = personalWeeksWithSavings > 0 ? '🌹'.repeat(Math.min(personalWeeksWithSavings, 10)) : '—';
-
-  // Weekly history
-  const histEl = document.getElementById('piggyHistory');
-  const recent = weekRows.slice(-8).reverse();
-  if (recent.length === 0 || !recent.some(w => w.grocerySaved !== 0 || w.personalSaved !== 0)) {
-    histEl.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:12px;font-style:italic">记录第一周后这里会显示明细</div>';
+function openEditTx(id) {
+  const tx = data.transactions.find(t => t.id === id);
+  if (!tx) return;
+  if (tx.type === 'transfer' || tx.type === 'payment') {
+    showToast('转账/还款记录请删除后重新添加');
     return;
   }
 
-  histEl.innerHTML = recent.map(w => {
-    const gSign = w.grocerySaved >= 0 ? '+' : '';
-    const pSign = w.personalSaved >= 0 ? '+' : '';
-    const gCls = w.grocerySaved >= 0 ? 'saved' : 'over';
-    const pCls = w.personalSaved >= 0 ? 'saved' : 'over';
-    return `<div class="piggy-week-item" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;align-items:center">
-      <div class="piggy-week-label">${w.label}</div>
-      <div class="piggy-week-amt ${gCls}" style="text-align:center;font-size:13px">${gSign}$${w.grocerySaved.toFixed(0)}<span style="font-size:10px;color:var(--text3);margin-left:2px">🥬</span></div>
-      <div class="piggy-week-amt ${pCls}" style="text-align:right;font-size:13px">${pSign}$${w.personalSaved.toFixed(0)}<span style="font-size:10px;color:var(--text3);margin-left:2px">🌹</span></div>
-    </div>`;
-  }).join('');
-}
+  document.getElementById('editTxId').value = id;
+  document.getElementById('editTxType').value = tx.type;
+  document.getElementById('editTxAmount').value = Math.abs(parseFloat(tx.amount)).toFixed(2);
+  document.getElementById('editTxNote').value = tx.note || '';
+  document.getElementById('editTxDate').value = tx.date.slice(0,10);
 
-function renderCalendar() {
-  const y = calState.year, m = calState.month;
-  document.getElementById('calMonthLabel').textContent = `${y}年${m+1}月`;
+  // Account select
+  const accOpts = data.accounts.map(a => `<option value="${a.id}" ${a.id===tx.account_id?'selected':''}>${a.name}</option>`).join('');
+  document.getElementById('editTxAccount').innerHTML = '<option value="">不指定</option>' + accOpts;
 
-  const grid = document.getElementById('calGrid');
-  const dows = ['日','一','二','三','四','五','六'];
-  let html = dows.map(d => `<div class="cal-dow">${d}</div>`).join('');
+  // Category pills
+  const catWrap = document.getElementById('editTxCatWrap');
+  const catGroup = document.getElementById('editTxCatGroup');
 
-  const firstDay = new Date(y, m, 1).getDay();
-  const daysInMonth = new Date(y, m+1, 0).getDate();
-  const daysInPrev = new Date(y, m, 0).getDate();
-  const todayStr = today();
-
-  // Build tx map for this month
-  const txMap = {};
-  data.transactions.forEach(t => {
-    const d = t.date.slice(0,10);
-    if (!txMap[d]) txMap[d] = {exp:0, inc:0};
-    if (t.type === 'expense') txMap[d].exp += t.amount;
-    else if (t.type === 'income') txMap[d].inc += t.amount;
-  });
-
-  // Prev month padding
-  for (let i = firstDay - 1; i >= 0; i--) {
-    const day = daysInPrev - i;
-    html += `<div class="cal-day other-month"><div class="cal-day-num">${day}</div></div>`;
-  }
-
-  // Current month
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isToday = dateStr === todayStr;
-    const isSel = dateStr === calState.selectedDate;
-    const dayData = txMap[dateStr];
-
-    let balanceHtml = '';
-    if (dayData) {
-      const net = dayData.inc - dayData.exp;
-      const balCls = net >= 0 ? 'pos' : 'neg';
-      const sign = net >= 0 ? '+' : '';
-      balanceHtml = `<div class="cal-day-balance ${balCls}">${sign}${Math.abs(net) < 100 ? net.toFixed(0) : Math.round(net/10)*10/10}</div>`;
-    }
-
-    html += `<div class="cal-day ${isToday?'today':''} ${isSel&&!isToday?'selected':''}" onclick="selectCalDay('${dateStr}')">
-      <div class="cal-day-num">${d}</div>
-      ${balanceHtml}
-    </div>`;
-  }
-
-  // Next month padding
-  const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
-  let nextDay = 1;
-  for (let i = firstDay + daysInMonth; i < totalCells; i++) {
-    html += `<div class="cal-day other-month"><div class="cal-day-num">${nextDay++}</div></div>`;
-  }
-
-  grid.innerHTML = html;
-
-  // Re-render day detail if selected
-  if (calState.selectedDate) selectCalDay(calState.selectedDate, true);
-}
-
-function selectCalDay(dateStr, silent) {
-  calState.selectedDate = dateStr;
-  if (!silent) renderCalendar();
-
-  const txs = data.transactions.filter(t => t.date.slice(0,10) === dateStr);
-  const exp = txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-  const inc = txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-
-  const d = new Date(dateStr);
-  const dateLabel = `${d.getMonth()+1}月${d.getDate()}日`;
-
-  const detail = document.getElementById('calDayDetail');
-  if (txs.length === 0) {
-    detail.innerHTML = `<div class="cal-detail-header">
-      <div class="cal-detail-date">${dateLabel}</div>
-    </div>
-    <div style="color:var(--text3);font-size:13px;font-style:italic;text-align:center;padding:8px">这天没有记录</div>`;
-    return;
-  }
-
-  detail.innerHTML = `<div class="cal-detail-header">
-    <div class="cal-detail-date">${dateLabel}</div>
-    <div class="cal-detail-totals">
-      ${exp > 0 ? `<div class="cal-detail-stat exp">-$${exp.toFixed(2)}</div>` : ''}
-      ${inc > 0 ? `<div class="cal-detail-stat inc">+$${inc.toFixed(2)}</div>` : ''}
-    </div>
-  </div>
-  <div class="tx-list">${txs.map(t => renderTxItem(t)).join('')}</div>`;
-}
-
-function changeCalMonth(delta) {
-  calState.month += delta;
-  if (calState.month < 0) { calState.month = 11; calState.year--; }
-  if (calState.month > 11) { calState.month = 0; calState.year++; }
-  renderCalendar();
-}
-
-
-// ============================================================
-// STICKER PICKER
-// ============================================================
-const STICKER_COUNT = 20;
-const STICKER_BASE = 'stickers/sticker_';
-
-let _stickerCallback = null;
-let _currentStickerCatId = null;
-
-function openStickerPicker(catId, callback) {
-  _currentStickerCatId = catId;
-  _stickerCallback = callback;
-
-  const grid = document.getElementById('stickerGrid');
-  const currentSticker = (data.catStickers||{})[catId] || null;
-
-  // Group label style
-  const groupLabel = (text) => `<div class="sticker-group-label">${text}</div>`;
-
-  let html = `<div class="sticker-none" onclick="selectSticker(null)" title="清除">✕</div>`;
-
-  // Set 1: sticker_01 - sticker_20
-  html += groupLabel('套装一');
-  for (let i = 1; i <= 20; i++) {
-    const num = String(i).padStart(2, '0');
-    const src = 'stickers/sticker_' + num + '.png';
-    const sel = currentSticker === src ? ' selected' : '';
-    html += `<div class="sticker-option${sel}" onclick="selectSticker('${src}')">
-      <img src="${src}" alt="sticker ${num}" loading="lazy">
-    </div>`;
-  }
-
-  // Set 2: little_prince_icon_01 - little_prince_icon_21
-  html += groupLabel('套装二');
-  for (let i = 1; i <= 21; i++) {
-    const num = String(i).padStart(2, '0');
-    const src = 'stickers/little_prince_icon_' + num + '.png';
-    const sel = currentSticker === src ? ' selected' : '';
-    html += `<div class="sticker-option${sel}" onclick="selectSticker('${src}')">
-      <img src="${src}" alt="icon ${num}" loading="lazy">
-    </div>`;
-  }
-
-  grid.innerHTML = html;
-  document.getElementById('stickerPickerOverlay').classList.add('open');
-}
-
-function selectSticker(src) {
-  if (!data.catStickers) data.catStickers = {};
-  if (src) {
-    data.catStickers[_currentStickerCatId] = src;
+  if (tx.type === 'expense') {
+    catGroup.style.display = 'block';
+    const cats = allExpCats();
+    catWrap.innerHTML = cats.map(c =>
+      `<div class="cat-pill${tx.category===c.id?' active':''}" onclick="setEditTxCat('${c.id}')" style="font-size:12px;padding:6px 10px">${c.label}</div>`
+    ).join('');
+  } else if (tx.type === 'income') {
+    catGroup.style.display = 'block';
+    catWrap.innerHTML = data.incCategories.map(c =>
+      `<div class="cat-pill${tx.category===c?' active':''}" onclick="setEditTxCat('${c}')" style="font-size:12px;padding:6px 10px">${c}</div>`
+    ).join('');
   } else {
-    delete data.catStickers[_currentStickerCatId];
+    catGroup.style.display = 'none';
   }
-  save();
-  document.getElementById('stickerPickerOverlay').classList.remove('open');
-  if (_stickerCallback) _stickerCallback();
-  renderExpensePage();
-  renderIncomePage();
+
+  document.getElementById('editTxModal').classList.add('open');
 }
 
-document.getElementById('stickerPickerOverlay').addEventListener('click', function(e) {
-  if (e.target === this) this.classList.remove('open');
-});
+function setEditTxCat(catId) {
+  document.querySelectorAll('#editTxCatWrap .cat-pill').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#editTxCatWrap .cat-pill').forEach(p => {
+    if (p.textContent.trim() === catId || p.getAttribute('onclick')?.includes(JSON.stringify(catId))) {
+      p.classList.add('active');
+    }
+  });
+  document.getElementById('editTxModal').dataset.cat = catId;
+}
+
+function saveEditTx() {
+  const id = document.getElementById('editTxId').value;
+  const tx = data.transactions.find(t => t.id === id);
+  if (!tx) return;
+
+  const newAmount = parseFloat(document.getElementById('editTxAmount').value);
+  if (!newAmount || newAmount <= 0) { showToast('请输入金额'); return; }
+
+  // Reverse old account effect
+  if (tx.account_id) {
+    const acc = data.accounts.find(a => a.id === tx.account_id);
+    if (acc) {
+      if (tx.type === 'expense') acc.balance = (parseFloat(acc.balance) + parseFloat(tx.amount)).toFixed(2);
+      else if (tx.type === 'income') acc.balance = (parseFloat(acc.balance) - parseFloat(tx.amount)).toFixed(2);
+    }
+  }
+
+  // Get new category
+  const activeCat = document.querySelector('#editTxCatWrap .cat-pill.active');
+  const newCat = document.getElementById('editTxModal').dataset.cat || 
+                 (activeCat ? (activeCat.getAttribute('onclick')?.match(/setEditTxCat\('([^']+)'\)/)?.[1] || activeCat.textContent.trim()) : tx.category);
+
+  // Update tx
+  tx.amount = newAmount;
+  tx.note = document.getElementById('editTxNote').value.trim();
+  tx.date = document.getElementById('editTxDate').value || tx.date;
+  tx.category = newCat;
+  const newAccId = document.getElementById('editTxAccount').value || null;
+  tx.account_id = newAccId;
+
+  // Apply new account effect
+  if (newAccId) {
+    const acc = data.accounts.find(a => a.id === newAccId);
+    if (acc) {
+      if (tx.type === 'expense') acc.balance = (parseFloat(acc.balance) - newAmount).toFixed(2);
+      else if (tx.type === 'income') acc.balance = (parseFloat(acc.balance) + newAmount).toFixed(2);
+    }
+  }
+
+  saveTx(tx);
+  save();
+  closeModal('editTxModal');
+  render();
+  showToast('✦ 已更新');
+}
 
 // ============================================================
 // INIT
 // ============================================================
 initStars();
-document.getElementById('expDate').value = today();
-document.getElementById('incDate').value = today();
-document.getElementById('trfDate').value = today();
-document.getElementById('payDate').value = today();
-// Mark period function as ready
-window._doSetReportPeriod = function(period) {
-  ui.reportPeriod = period;
-  ui.reportPeriodOffset = 0;
-  ['week','month','year'].forEach(function(p) {
-    var btn = document.getElementById('sp'+p.charAt(0).toUpperCase()+p.slice(1));
-    if (btn) btn.classList.toggle('active', p===period);
-  });
-  renderReport();
-};
-window._reportPeriodReady = true;
-if (_pendingPeriod) { window._doSetReportPeriod(_pendingPeriod); _pendingPeriod = null; }
+document.getElementById('expDate').value=today();
+document.getElementById('incDate').value=today();
+document.getElementById('trfDate').value=today();
+document.getElementById('payDate').value=today();
+load().then(()=>render());
 
-load().then(() => render());
 </script>
 </body>
 </html>
