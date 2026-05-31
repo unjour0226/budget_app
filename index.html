@@ -2837,7 +2837,7 @@ function renderTxItem(t) {
 // ASSETS
 // ============================================================
 function renderAssets() {
-  if(!document.getElementById('accountsFullGrid')) return;
+  if(!document.getElementById('assetGroupCash')) return;
   const cashAccs=data.accounts.filter(a=>a.type!=='credit');
   const creditAccs=data.accounts.filter(a=>a.type==='credit');
   const totalAssets=cashAccs.filter(a=>a.include_in_net!==false).reduce((s,a)=>s+Math.max(parseFloat(a.balance),0),0);
